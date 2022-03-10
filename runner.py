@@ -106,6 +106,9 @@ def run_ddos(targets, total_threads, period, rpc, udp_threads, http_methods, deb
 
 
 def resolve_target(target):
+    if not target.contains('://'):
+        target = f'http://{target}'
+
     url = URL(target)
     host = url.host
     try:
