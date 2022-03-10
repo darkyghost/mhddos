@@ -125,3 +125,6 @@ Get more proxies (possibly lower quality) | Більше проксі, але г
 Specific HTTP(S) attack method(s) | Обрати метод(и) для HTTP(S) атаки
 
     python3 runner.py https://tvzvezda.ru --http-methods CFB CFBUAM
+
+## TODO
+- [ ] Skip HTTP(S) proxies download for pure TCP workloads

