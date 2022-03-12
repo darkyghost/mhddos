@@ -161,8 +161,8 @@ def init_argparse() -> argparse.ArgumentParser:
     parser.add_argument(
         '--http-methods',
         nargs='+',
-        default=['GET', 'STRESS', 'BOT', 'DOWNLOADER'],
-        help='List of HTTP(s) attack methods to use. Default is GET, STRESS, BOT, DOWNLOADER',
+        default=['GET', 'POST', 'STRESS', 'BOT', 'PPS'],
+        help='List of HTTP(s) attack methods to use. Default is GET, POST, STRESS, BOT, PPS',
     )
     return parser
 

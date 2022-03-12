@@ -117,7 +117,7 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
       --udp-threads 1        Threads to run per UDP target (default is 1)
 
       --http-methods GET     List of HTTP(s) attack methods to use.
-                             (default is GET, STRESS, BOT, DOWNLOADER)
+                             (default is GET, POST, STRESS, BOT, PPS)
                              Refer to MHDDoS docs for available options
                              (https://github.com/MHProDev/MHDDoS)
 
@@ -186,7 +186,7 @@ Wrapper script for running [MHDDoS](https://github.com/MHProDev/MHDDoS)
       --udp-threads 1        Threads to run per UDP target (default is 1)
 
       --http-methods GET     List of HTTP(s) attack methods to use.
-                             (default is GET, STRESS, BOT, DOWNLOADER)
+                             (default is GET, POST, STRESS, BOT, PPS)
                              Refer to MHDDoS docs for available options
                              (https://github.com/MHProDev/MHDDoS)
 
