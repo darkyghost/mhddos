@@ -134,15 +134,15 @@ def run_ddos(targets, total_threads, period, rpc, udp_threads, http_methods, deb
 def start(total_threads, period, targets, rpc, udp_threads, http_methods, proxy_timeout, debug):
     os.chdir('MHDDoS')
     while True:
-        targets = list(targets)
-        if not targets:
+        resolved = list(targets)
+        if not resolved:
             logger.error('Must provide either targets or a valid config file')
             exit()
 
-        no_proxies = all(target.lower().startswith('udp://') for target in targets)
+        no_proxies = all(target.lower().startswith('udp://') for target in resolved)
         if not no_proxies:
-            update_proxies(period, proxy_timeout, targets)
-        run_ddos(targets, total_threads, period, rpc, udp_threads, http_methods, debug)
+            update_proxies(period, proxy_timeout, resolved)
+        run_ddos(resolved, total_threads, period, rpc, udp_threads, http_methods, debug)
 
 
 def init_argparse() -> argparse.ArgumentParser:
