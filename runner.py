@@ -58,6 +58,10 @@ def update_proxies(period, proxy_timeout, targets):
     logger.info(f'{len(Proxies):,} Proxies are getting checked, this may take a while:')
 
     futures = []
+    proxy_threads = max(
+        1000,
+        400 * multiprocessing.cpu_count(),
+    ) // size
     with ThreadPoolExecutor(size) as executor:
         for target, chunk in zip(targets, (Proxies[i::size] for i in range(size))):
             logger.info(f'{len(chunk):,} Proxies are getting checked against {target}')
@@ -66,7 +70,7 @@ def update_proxies(period, proxy_timeout, targets):
                     ProxyChecker.checkAll,
                     proxies=chunk,
                     timeout=proxy_timeout,
-                    threads=1000 // size,
+                    threads=proxy_threads,
                     url=target
                 )
             )
