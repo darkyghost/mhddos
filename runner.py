@@ -58,7 +58,7 @@ def update_proxies(period, proxy_timeout, targets):
     logger.info(f'{len(Proxies):,} Proxies are getting checked, this may take a while:')
 
     futures = []
-    proxy_threads = max(
+    proxy_threads = min(
         1000,
         400 * multiprocessing.cpu_count(),
     ) // size
