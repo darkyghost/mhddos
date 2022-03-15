@@ -34,6 +34,20 @@
     git clone https://github.com/MHProDev/MHDDoS.git
     python3 -m pip install -r MHDDoS/requirements.txt
 
+### Windows x64 (Python)
+Завантажте і встановіть Python та Git
+-  https://www.python.org/ftp/python/3.10.2/python-3.10.2-amd64.exe
+-  https://github.com/git-for-windows/git/releases/download/v2.35.1.windows.2/Git-2.35.1.2-64-bit.exe
+
+Запускаємо Git Bash
+
+    git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
+    cd mhddos_proxy
+    git clone https://github.com/MHProDev/MHDDoS.git
+    python -m pip install -r MHDDoS/requirements.txt
+
+Зверніть увагу, використовується саме **python** а не python3.
+
 ## Запуск - ВИМКНІТЬ VPN
 
 ### Docker
@@ -139,6 +153,20 @@ Wrapper script for running [MHDDoS](https://github.com/MHProDev/MHDDoS)
     cd mhddos_proxy
     git clone https://github.com/MHProDev/MHDDoS.git
     python3 -m pip install -r MHDDoS/requirements.txt
+
+### Windows x64 (Python)
+Download and install Python and Git
+-  https://www.python.org/ftp/python/3.10.2/python-3.10.2-amd64.exe
+-  https://github.com/git-for-windows/git/releases/download/v2.35.1.windows.2/Git-2.35.1.2-64-bit.exe
+
+Let's run Git Bash
+
+    git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
+    cd mhddos_proxy
+    git clone https://github.com/MHProDev/MHDDoS.git
+    python -m pip install -r MHDDoS/requirements.txt
+
+Note that **python** is used instead of python3.
 
 ### Docker
 
