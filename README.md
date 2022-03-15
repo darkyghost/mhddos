@@ -36,8 +36,8 @@
 
 ### Windows x64 (Python)
 Завантажуємо та встановлюємо Python та Git
-    1. https://www.python.org/ftp/python/3.10.2/python-3.10.2-amd64.exe
-    2. https://github.com/git-for-windows/git/releases/download/v2.35.1.windows.2/Git-2.35.1.2-64-bit.exe
+-  https://www.python.org/ftp/python/3.10.2/python-3.10.2-amd64.exe
+-  https://github.com/git-for-windows/git/releases/download/v2.35.1.windows.2/Git-2.35.1.2-64-bit.exe
 
 Запускаємо Git Bash
     git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
