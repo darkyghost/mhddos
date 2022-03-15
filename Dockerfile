@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM python:3.10-alpine as builder
+FROM python:3.10-alpine as builder
 RUN apk update && apk add --update git gcc libc-dev libffi-dev
 RUN git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
 WORKDIR mhddos_proxy
