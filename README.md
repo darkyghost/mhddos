@@ -44,7 +44,7 @@
     git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
     cd mhddos_proxy
     git clone https://github.com/MHProDev/MHDDoS.git
-    **python** -m pip install -r MHDDoS/requirements.txt
+    python -m pip install -r MHDDoS/requirements.txt
 
 Зверніть увагу, використовується саме **python** а не python3.
 
@@ -164,7 +164,7 @@ Let's run Git Bash
     git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
     cd mhddos_proxy
     git clone https://github.com/MHProDev/MHDDoS.git
-    **python** -m pip install -r MHDDoS/requirements.txt
+    python -m pip install -r MHDDoS/requirements.txt
 
 Note that **python** is used instead of python3.
 
