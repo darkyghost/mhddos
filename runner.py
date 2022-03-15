@@ -173,15 +173,15 @@ def init_argparse() -> argparse.ArgumentParser:
         '--period',
         type=int,
         default=300,
-        help='How often to update the proxies (in seconds) (default is 300)',
+        help='How often to update the proxies (in seconds) (default is 600)',
     )
     parser.add_argument(
         '--proxy-timeout',
         metavar='TIMEOUT',
         type=float,
-        default=2,
+        default=3,
         help='How many seconds to wait for the proxy to make a connection. '
-             'Higher values give more proxies, but with lower speed/quality. It also takes more time (default is 2)',
+             'Higher values give more proxies, but with lower speed/quality. It also takes more time (default is 3)',
     )
     parser.add_argument(
         '--rpc',
@@ -228,8 +228,8 @@ def print_banner():
     python3 runner.py --debug https://ria.ru https://tass.ru
 - Більше проксі (можливо, гіршої якості) - `--proxy-timeout SECONDS`
     python3 runner.py --proxy-timeout 5 https://ria.ru https://tass.ru
-- Частота оновлення проксі (за замовчуванням - кожні 5 хвилин) - `-p SECONDS`
-    python3 runner.py -p 600 https://ria.ru https://tass.ru
+- Частота оновлення проксі (за замовчуванням - кожні 10 хвилин) - `-p SECONDS`
+    python3 runner.py -p 900 https://ria.ru https://tass.ru
                           !!!ВИМКНІТЬ VPN!!!  (окрім UDP атак)
     ''')
 
