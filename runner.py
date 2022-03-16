@@ -232,7 +232,7 @@ def print_banner():
 - TCP         tcp://194.54.14.131:22
 - UDP         udp://217.175.155.100:53 - !!!ДЛЯ ЦЬОГО ПОТРІБЕН VPN!!!
 # Конфігурація. Усі параметри можна комбінувати, можна вказувати і до і після переліку цілей.
-Для Docker замініть `python3 runner.py` на `docker run -it --rm portholeascend/mhddos_proxy`
+Для Docker замініть `python3 runner.py` на `docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy:latest`
 - Повна документація - `python3 runner.py --help` 
 - Навантаження - `-t XXX` - кількість потоків на кожне ядро CPU, за замовчуванням - 300
     python3 runner.py -t 500 https://ria.ru https://tass.ru
