@@ -184,7 +184,7 @@ def init_argparse() -> argparse.ArgumentParser:
         '-p',
         '--period',
         type=int,
-        default=300,
+        default=600,
         help='How often to update the proxies (in seconds) (default is 600)',
     )
     parser.add_argument(
