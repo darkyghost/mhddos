@@ -72,7 +72,7 @@ def update_proxies(period, proxy_timeout, targets):
     futures = []
     proxy_threads = min(
         1000,
-        400 * multiprocessing.cpu_count(),
+        300 * multiprocessing.cpu_count(),
     ) // size
     with ThreadPoolExecutor(size) as executor:
         for target, chunk in zip(targets, (Proxies[i::size] for i in range(size))):
