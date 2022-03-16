@@ -292,7 +292,7 @@
     },
     {
       "type": 1,
-      "url": "http://proxydb.net/?protocol=http&protocol=https&anonlvl=2&anonlvl=3&anonlvl=4",
+      "url": "http://proxydb.net/?protocol=http&protocol=https",
       "timeout": 5
     },
     {
