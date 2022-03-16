@@ -22,7 +22,19 @@ class Targets:
     def __iter__(self):
         self.load_config()
         for target in self.targets + self.config_targets:
-            yield target
+            yield self.prepare_target(target)
+
+    def prepare_target(self, target):
+        if '://' in target:
+            return target
+
+        try:
+            _, port = target.split(':', 1)
+        except ValueError:
+            port = '80'
+
+        scheme = 'https://' if port == '443' else 'http://'
+        return scheme + target
 
     def load_config(self):
         if not self.config:
