@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from MHDDoS.start import ProxyManager, logger
-from PyRoxy import ProxyChecker, ProxyType
+from PyRoxy import ProxyChecker, ProxyType, Proxy
 
 
 class Targets:
@@ -52,6 +52,14 @@ class Targets:
             ]
 
 
+def remove_duplicates(proxies):
+    proxy_tuples = (
+        (proxy.host, proxy.port, proxy.type)
+        for proxy in proxies
+    )
+    return [Proxy(*pargs) for pargs in set(proxy_tuples)]
+
+
 def update_proxies(period, proxy_timeout, targets):
     #  Avoid parsing proxies too often when restart happens
     if os.path.exists('files/proxies/proxies.txt'):
@@ -62,7 +70,7 @@ def update_proxies(period, proxy_timeout, targets):
     with open('../proxies_config.json') as f:
         config = json.load(f)
 
-    Proxies = list(ProxyManager.DownloadFromConfig(config, 0))
+    Proxies = remove_duplicates(ProxyManager.DownloadFromConfig(config, 0))
     random.shuffle(Proxies)
 
     CheckedProxies = []
