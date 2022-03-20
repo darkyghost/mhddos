@@ -1,5 +1,4 @@
 import argparse
-import json
 import os
 import random
 import subprocess
@@ -9,10 +8,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
 
 import requests
-from MHDDoS.start import ProxyManager, logger
+from MHDDoS.start import logger
 from PyRoxy import ProxyType, Proxy
 
 
+PROXIES_URL = 'https://raw.githubusercontent.com/porthole-ascend-cinnamon/proxy_scraper/main/proxies.txt'
 PROXY_TIMEOUT = 5
 UDP_THREADS = 1
 LOW_RPC = 1000
@@ -60,12 +60,10 @@ class Targets:
             ]
 
 
-def remove_duplicates(proxies):
-    proxy_tuples = (
-        (proxy.host, proxy.port, proxy.type)
-        for proxy in proxies
-    )
-    return [Proxy(*pargs) for pargs in set(proxy_tuples)]
+def download_proxies():
+    response = requests.get(PROXIES_URL, timeout=10)
+    for line in response.iter_lines(decode_unicode=True):
+        yield Proxy.fromString(line)
 
 
 def update_proxies(period, targets):
@@ -75,10 +73,7 @@ def update_proxies(period, targets):
         if (time.time() - last_update) < period / 2:
             return
 
-    with open('../proxies_config.json') as f:
-        config = json.load(f)
-
-    Proxies = remove_duplicates(ProxyManager.DownloadFromConfig(config, 0))
+    Proxies = list(download_proxies())
     random.shuffle(Proxies)
 
     size = len(targets)
