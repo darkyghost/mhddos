@@ -9,6 +9,8 @@
 
 **ВИМКНІТЬ VPN** - використовуються проксі, VPN тільки заважатиме!
 
+### Неофіційний гайд - [Детальний розбір MHDDoS_proxy](https://github.com/SlavaUkraineSince1991/DDoS-for-all/blob/main/MHDDoS_proxy.md) 
+
 ## Встановлення
 
 ### Docker - найкращий варіант у більшості випадків
