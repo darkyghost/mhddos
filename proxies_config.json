@@ -2,12 +2,12 @@
   "proxy-providers": [
     {
       "type": 4,
-      "url": "https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks4",
+      "url": "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks4",
       "timeout": 5
     },
     {
       "type": 4,
-      "url": "https://api.proxyscrape.com/?request=getproxies&proxytype=socks4",
+      "url": "https://api.proxyscrape.com/?request=displayproxies&proxytype=socks4",
       "timeout": 5
     },
     {
