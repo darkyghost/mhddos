@@ -44,6 +44,10 @@
 
 Зверніть увагу, використовується саме **python** а не python3.
 
+### Helm
+
+https://github.com/localdotcom/mhddos-proxy-helm
+
 ## Запуск - ВИМКНІТЬ VPN
 
 ### Docker
