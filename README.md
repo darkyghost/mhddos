@@ -94,7 +94,7 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
 
 Обрати метод(и) для HTTP(S) атаки (наприклад для обходу Cloudflare) - `--http-methods CFB`  
 **Цей параметр тільки в кінці** команди  
-Повний список [див. тут](https://github.com/MHProDev/MHDDoS#features-and-methods)
+Повний список [див. тут](https://github.com/MHProDev/MHDDoS#features-and-methods), окрім DGB, BOMB та KILLER.
 
     docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy https://ria.ru https://tass.ru --http-methods CFB
 
