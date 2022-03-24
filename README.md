@@ -27,7 +27,7 @@
 
     git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
     cd mhddos_proxy
-    git clone https://github.com/MHProDev/MHDDoS.git
+    git clone https://github.com/porthole-ascend-cinnamon/MHDDoS.git
     python3 -m pip install -r MHDDoS/requirements.txt
 
 ### Windows x64 (Python)
@@ -39,7 +39,7 @@
 
     git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
     cd mhddos_proxy
-    git clone https://github.com/MHProDev/MHDDoS.git
+    git clone https://github.com/porthole-ascend-cinnamon/MHDDoS.git
     python -m pip install -r MHDDoS/requirements.txt
 
 Зверніть увагу, використовується саме **python** а не python3.
@@ -139,7 +139,7 @@ Wrapper script for running [MHDDoS](https://github.com/MHProDev/MHDDoS)
 
     git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
     cd mhddos_proxy
-    git clone https://github.com/MHProDev/MHDDoS.git
+    git clone https://github.com/porthole-ascend-cinnamon/MHDDoS.git
     python3 -m pip install -r MHDDoS/requirements.txt
 
 ### Windows x64 (Python)
@@ -151,7 +151,7 @@ Let's run Git Bash
 
     git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
     cd mhddos_proxy
-    git clone https://github.com/MHProDev/MHDDoS.git
+    git clone https://github.com/porthole-ascend-cinnamon/MHDDoS.git
     python -m pip install -r MHDDoS/requirements.txt
 
 Note that **python** is used instead of python3.
