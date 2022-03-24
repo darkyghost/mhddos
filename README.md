@@ -1,6 +1,6 @@
 ## Changelog
 - 24.03.2022 Forked MHDDoS. Reasons:
-  - Multiple breaking commits during previous 2 days.
+  - Multiple breaking commits in recent days.
   - Slow response to the PRs/Issues.
   - Need for more control over certain aspects, like socket timeout and ability to run MHDDoS in threads instead of proccesses
   - Ability to change certain methods (DGB, CFB) to actually work - without the need to argue with the original maintainer (who is, again, slow to respond)
