@@ -1,3 +1,15 @@
+## Changelog
+- 24.03.2022 Forked MHDDoS. Reasons:
+  - Multiple breaking commits during previous 2 days.
+  - Slow response to the PRs/Issues.
+  - Need for more control over certain aspects, like socket timeout and ability to run MHDDoS in threads instead of proccesses
+  - Ability to change certain methods (DGB, CFB) to actually work - without the need to argue with the original maintainer (who is, again, slow to respond)
+
+- 23.03.2022 Removed the ability to run DGB, BOMB and KILLER methods
+  - DGB - bad implementation, still hits the DDoS-Guard servers without affecting the target
+  - KILLER - may "kill" you machine by starting threads without any control
+  - BOMB - requires additional setup, which is not implemented yet. Will error if run anyway
+
 ## Опис
 
 Скрипт-обгортка для запуску потужного DDoS інструмента [MHDDoS](https://github.com/MHProDev/MHDDoS).
