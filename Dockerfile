@@ -2,8 +2,7 @@ FROM python:3.10-alpine as builder
 RUN apk update && apk add --update git gcc libc-dev libffi-dev
 RUN git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
 WORKDIR mhddos_proxy
-RUN git clone https://github.com/porthole-ascend-cinnamon/MHDDoS.git
-RUN pip3 install --target=/mhddos_proxy/dependencies -r MHDDoS/requirements.txt
+RUN pip3 install --target=/mhddos_proxy/dependencies -r requirements.txt
 
 FROM python:3.10-alpine
 WORKDIR mhddos_proxy

