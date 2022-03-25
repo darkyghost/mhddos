@@ -1,11 +1,12 @@
 ## Changelog
-- 24.03.2022 Forked MHDDoS. Reasons:
+- **25.03.2020** MHDDoS now included in this repo instead of a separate one. This is simpler to install and manage
+- **24.03.2022** Forked MHDDoS. Reasons:
   - Multiple breaking commits in recent days.
   - Slow response to the PRs/Issues.
   - Need for more control over certain aspects, like socket timeout and ability to run MHDDoS in threads instead of proccesses
   - Ability to change certain methods (DGB, CFB) to actually work - without the need to argue with the original maintainer (who is, again, slow to respond)
 
-- 23.03.2022 Removed the ability to run DGB, BOMB and KILLER methods
+- **23.03.2022** Removed the ability to run DGB, BOMB and KILLER methods
   - DGB - bad implementation, still hits the DDoS-Guard servers without affecting the target
   - KILLER - may "kill" you machine by starting threads without any control
   - BOMB - requires additional setup, which is not implemented yet. Will error if run anyway
@@ -39,8 +40,7 @@
 
     git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
     cd mhddos_proxy
-    git clone https://github.com/porthole-ascend-cinnamon/MHDDoS.git
-    python3 -m pip install -r MHDDoS/requirements.txt
+    python3 -m pip install -r requirements.txt
 
 ### Windows x64 (Python)
 Завантажте і встановіть Python та Git
@@ -51,8 +51,7 @@
 
     git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
     cd mhddos_proxy
-    git clone https://github.com/porthole-ascend-cinnamon/MHDDoS.git
-    python -m pip install -r MHDDoS/requirements.txt
+    python -m pip install -r requirements.txt
 
 Зверніть увагу, використовується саме **python** а не python3.
 
@@ -151,8 +150,7 @@ Wrapper script for running [MHDDoS](https://github.com/MHProDev/MHDDoS)
 
     git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
     cd mhddos_proxy
-    git clone https://github.com/porthole-ascend-cinnamon/MHDDoS.git
-    python3 -m pip install -r MHDDoS/requirements.txt
+    python3 -m pip install -r requirements.txt
 
 ### Windows x64 (Python)
 Download and install Python and Git
@@ -163,8 +161,7 @@ Let's run Git Bash
 
     git clone https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git
     cd mhddos_proxy
-    git clone https://github.com/porthole-ascend-cinnamon/MHDDoS.git
-    python -m pip install -r MHDDoS/requirements.txt
+    python -m pip install -r requirements.txt
 
 Note that **python** is used instead of python3.
 
@@ -174,13 +171,13 @@ Note that **python** is used instead of python3.
 - Mac: https://docs.docker.com/desktop/mac/install/
 - Ubuntu: https://docs.docker.com/engine/install/ubuntu/
 
-      docker pull ghcr.io/porthole-ascend-cinnamon/mhddos_proxy:latest
+      docker pull ghcr.io/porthole-ascend-cinnamon/mhddos_proxy
 
 ## Running
 
 ### Docker
 
-    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy:latest COMMAND
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy COMMAND
 
 ### Python
 
