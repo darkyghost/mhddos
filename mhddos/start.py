@@ -1245,15 +1245,6 @@ class ToolsConsole:
         return {"success": False}
 
 
-def handleProxyList(proxy_li):
-    proxies = ProxyUtiles.readFromFile(proxy_li)
-    if proxies:
-        logger.info(f"{bcolors.WARNING}Proxy Count: {bcolors.OKBLUE}{len(proxies):,}{bcolors.RESET}")
-    else:
-        exit('Empty proxy file, exiting')
-    return proxies
-
-
 def main(argv):
     with suppress(KeyboardInterrupt):
         with suppress(IndexError):
@@ -1322,7 +1313,7 @@ def main(argv):
                 if not uagents: exit("Empty Useragent File ")
                 if not referers: exit("Empty Referer File ")
 
-                proxies = handleProxyList(proxy_li)
+                proxies = ProxyUtiles.readFromFile(proxy_li)
                 for thread_id in range(threads):
                     HttpFlood(thread_id, url, host, method, rpc, event,
                               uagents, referers, proxies).start()
@@ -1370,9 +1361,8 @@ def main(argv):
                         elif argfive.isdigit() and len(argv) >= 7:
                             if len(argv) == 8:
                                 logger.setLevel("DEBUG")
-                            proxy_ty = int(argfive)
                             proxy_li = Path(__dir__ / "files/proxies" / argv[6].strip())
-                            proxies = handleProxyList(proxy_li)
+                            proxies = ProxyUtiles.readFromFile(proxy_li)
                             if method not in {"MINECRAFT", "MCBOT", "TCP", "CPS", "CONNECTION"}:
                                 exit("this method cannot use for layer4 proxy")
 
