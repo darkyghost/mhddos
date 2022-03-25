@@ -204,6 +204,7 @@ def init_argparse() -> argparse.ArgumentParser:
     parser.add_argument(
         '--http-methods',
         nargs='+',
+        type=str.upper,
         default=['GET', 'POST', 'STRESS', 'BOT', 'PPS'],
         choices=Methods.LAYER7_METHODS - {'DGB', 'BOMB', 'KILLER'},
         help='List of HTTP(s) attack methods to use. Default is GET, POST, STRESS, BOT, PPS',
