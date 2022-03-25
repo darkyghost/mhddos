@@ -1,6 +1,5 @@
 ## Changelog
-- **25.03.2022** Proxies check is now performed on the server-side. This allows to skip 2-3 minutes check on the client. 
-- **24.03.2022** Forked MHDDoS. Reasons:
+- 24.03.2022 Forked MHDDoS. Reasons:
   - Multiple breaking commits in recent days.
   - Slow response to the PRs/Issues.
   - Need for more control over certain aspects, like socket timeout and ability to run MHDDoS in threads instead of proccesses
