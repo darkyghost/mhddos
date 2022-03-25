@@ -1,4 +1,5 @@
 ## Changelog
+- **25.03.2020** Added VPN mode (`--vpn` flag)
 - **25.03.2020** MHDDoS now included in this repo instead of a separate one. This is simpler to install and manage
 - **24.03.2022** Forked MHDDoS. Reasons:
   - Multiple breaking commits in recent days.
