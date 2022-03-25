@@ -74,35 +74,13 @@ def update_proxies(period, targets):
             return
 
     Proxies = list(download_proxies())
-    random.shuffle(Proxies)
-
-    size = len(targets)
-    logger.info(f'{len(Proxies):,} проксі перевіряється на працездатність - це може зайняти пару хвилин:')
-
-    future_to_proxy = {}
-    with ThreadPoolExecutor(THREADS_PER_CORE) as executor:
-        for target, chunk in zip(targets, (Proxies[i::size] for i in range(size))):
-            future_to_proxy.update({
-                executor.submit(proxy.check, target, PROXY_TIMEOUT): proxy
-                for proxy in chunk
-            })
-
-        CheckedProxies = [
-            future_to_proxy[future]
-            for future in as_completed(future_to_proxy) if future.result()
-        ]
-
-    if not CheckedProxies:
-        logger.error(
-            'Не знайдено робочих проксі. '
-            'Переконайтеся що інтернет з`єднання стабільне і ціль доступна. '
-            'Перезапустіть Docker.'
-        )
+    if not Proxies:
+        logger.error('На жаль, наразі немає робочих проксі')
         exit()
 
     os.makedirs('files/proxies/', exist_ok=True)
     with open('files/proxies/proxies.txt', 'w') as wr:
-        for proxy in CheckedProxies:
+        for proxy in Proxies:
             proxy_string = str(proxy) + '\n'
             wr.write(proxy_string)
 
