@@ -1,11 +1,18 @@
 ## Changelog
-- **25.03.2020** Added VPN mode (`--vpn` flag)
-- **25.03.2020** MHDDoS now included in this repo instead of a separate one. This is simpler to install and manage
-- **24.03.2022** Forked MHDDoS. Reasons:
-  - Multiple breaking commits in recent days.
-  - Slow response to the PRs/Issues.
-  - Need for more control over certain aspects, like socket timeout and ability to run MHDDoS in threads instead of proccesses
-  - Ability to change certain methods (DGB, CFB) to actually work - without the need to argue with the original maintainer (who is, again, slow to respond)
+- **26.03.2020**
+  - Attack now runs all selected methods instead of selecting one randomly
+  - Reduced memory usage by switching processes to threads. Large targets lists should no longer be an issue!
+  - Translated output and added colors
+- **25.03.2020** 
+  - Added VPN mode (`--vpn` flag)
+- **25.03.2020** 
+  - MHDDoS now included in this repo instead of a separate one. This is simpler to install and manage
+- **24.03.2022** 
+  - Forked MHDDoS. Reasons:
+    - Multiple breaking commits in recent days.
+    - Slow response to the PRs/Issues.
+    - Need for more control over certain aspects, like socket timeout and ability to run MHDDoS in threads instead of processes
+    - Ability to change certain methods (DGB, CFB) to actually work - without the need to argue with the original maintainer (who is, again, slow to respond)
 
 - **23.03.2022** Removed the ability to run DGB, BOMB and KILLER methods
   - DGB - bad implementation, still hits the DDoS-Guard servers without affecting the target
