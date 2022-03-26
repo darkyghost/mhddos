@@ -133,11 +133,11 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug)
         # UDP
         if target.lower().startswith('udp://'):
             logger.warning(f'Make sure VPN is enabled - proxies are not supported for UDP targets: {target}')
-            params_list.append(['UDP', target[6:], ip, UDP_THREADS, period])
+            params_list.append(['UDP', target, ip, UDP_THREADS, period])
 
         # TCP
         elif target.lower().startswith('tcp://'):
-            params_list.append(['TCP', target[6:], ip, threads_per_target, period, proxy_file])
+            params_list.append(['TCP', target, ip, threads_per_target, period, proxy_file])
 
         # HTTP(S)
         else:
