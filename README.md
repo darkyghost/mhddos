@@ -1,24 +1,17 @@
 ## Changelog
+- **27.03.2020** 
+  - Дозволено запуск методів DBG, BOMB (дякую @drew-kun за PR) та KILLER для відповідності оригінальному MHDDoS.
+  - Метод DGB оновлено, проте працездатність залишається під питанням - 
+    успішні запити залежать не скільки від самої реалізації, скільки від "чистоти" IP-адреси. Не можу рекомендувати до використання.
+  - Метод CFB має ті самі проблеми - запит або успішний незалежно від методу, або наявна реалізація 2-ох річної давнини не здатна обійти захист. 
+    Наразі не існує надійної open-source реалізації обходу захисту Cloudflare та DDoS-Guard - єффективнішим буде пошук оригінальних серверів цілі. 
+  - Метод BOMB потребує значно більше RAM - зменшіть значення `-t`. Також потребує додаткових налаштувань при запуску через python - звертайтеся до [документації MHDDoS](https://github.com/MHProDev/MHDDoS).
 - **26.03.2020**
-  - Attack now runs all selected methods instead of selecting one randomly
-  - Reduced memory usage by switching processes to threads. Large targets lists should no longer be an issue!
-  - Translated output and added colors
-  - Fixed issue with DNS name resolving (gaioerror)
-- **25.03.2020** 
-  - Added VPN mode (`--vpn` flag)
-- **25.03.2020** 
-  - MHDDoS now included in this repo instead of a separate one. This is simpler to install and manage
-- **24.03.2022** 
-  - Forked MHDDoS. Reasons:
-    - Multiple breaking commits in recent days.
-    - Slow response to the PRs/Issues.
-    - Need for more control over certain aspects, like socket timeout and ability to run MHDDoS in threads instead of processes
-    - Ability to change certain methods (DGB, CFB) to actually work - without the need to argue with the original maintainer (who is, again, slow to respond)
-
-- **23.03.2022** Removed the ability to run DGB, BOMB and KILLER methods
-  - DGB - bad implementation, still hits the DDoS-Guard servers without affecting the target
-  - KILLER - may "kill" you machine by starting threads without any control
-  - BOMB - requires additional setup, which is not implemented yet. Will error if run anyway
+  - Запуск усіх обраних атак, замість випадкового вибору 
+  - Зменшено використання RAM на великій кількості цілей - тепер на RAM впливає тільки параметр `-t` 
+  - Додане кешування DNS і корректна обробка проблем з резолвінгом
+- **25.03.2020** Додано режим VPN замість проксі (прапорець `--vpn`) 
+- **25.03.2020** MHDDoS включено до складу репозиторію для більшого контролю над розробкою і захистом від неочікуваних змін
 
 ## Опис
 
@@ -114,7 +107,7 @@ UDP - **ТУТ ПОТРІБНО ВКЛЮЧИТИ VPN**
 
 Обрати метод(и) для HTTP(S) атаки (наприклад для обходу Cloudflare) - `--http-methods CFB`  
 **Цей параметр тільки в кінці** команди  
-Повний список [див. тут](https://github.com/MHProDev/MHDDoS#features-and-methods), окрім DGB, BOMB та KILLER.
+Повний список [див. тут](https://github.com/MHProDev/MHDDoS#features-and-methods).
 
     docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy https://ria.ru https://tass.ru --http-methods CFB
 
