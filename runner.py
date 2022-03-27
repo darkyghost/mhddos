@@ -238,7 +238,7 @@ def print_banner(vpn_mode):
     print(f'''
                             {cl.HEADER}!!!{'УВІМКНІТЬ VPN!!!' if vpn_mode else 'ВИМКНІТЬ VPN!!!  (окрім UDP атак)'}{cl.RESET}
 
-- {cl.WARNING}Використовувати VPN замість проксі{cl.RESET} - прапорець `--vpn`
+- {cl.WARNING}VPN замість проксі{cl.RESET} - прапорець `--vpn`
 - {cl.WARNING}Навантаження (кількість потоків){cl.RESET} - параметр `-t 3000`, за замовчуванням - CPU * 1000
 - {cl.WARNING}Інформація про хід атаки{cl.RESET} - прапорець `--debug`
 - {cl.WARNING}Повна документація{cl.RESET} - https://github.com/porthole-ascend-cinnamon/mhddos_proxy
