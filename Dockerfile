@@ -1,4 +1,4 @@
-FROM python:3.10-alpine as builder
+FROM --platform=$BUILDPLATFORM python:3.10-alpine as builder
 RUN apk update && apk add --update git gcc libc-dev libffi-dev
 WORKDIR mhddos_proxy
 COPY ./requirements.txt .
