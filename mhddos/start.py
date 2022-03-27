@@ -27,6 +27,7 @@ from impacket.ImpactPacket import IP, TCP, UDP, Data
 from requests import Response, Session, get, cookies
 from yarl import URL
 
+from table_logger import TableLogger
 
 logging.basicConfig(format='[%(asctime)s - %(levelname)s] %(message)s', datefmt="%H:%M:%S")
 logger = logging.getLogger("MHDDoS")
@@ -1032,7 +1033,7 @@ class HttpFlood(Thread):
         if name == "KILLER": self.SENT_FLOOD = self.KILLER
 
 
-def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, debug=False, refl_li_fn=None):
+def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, debug=False, refl_li_fn=None, table=False, text_to_print=[]):
     port = None
     url = None
     event = Event()
@@ -1109,22 +1110,35 @@ def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, debug=Fals
             Layer4((ip, port), ref, method, event,
                    proxies).start()
 
-    logger.info(
-        f"{bcolors.WARNING}Атакуємо{bcolors.OKBLUE} %s{bcolors.WARNING} методом{bcolors.OKBLUE} %s{bcolors.WARNING}, потоків:{bcolors.OKBLUE} %d{bcolors.WARNING}!{bcolors.RESET}"
-        % (target or url.host, method, threads))
+    if not table:
+        logger.info(
+            f"{bcolors.WARNING}Атакуємо{bcolors.OKBLUE} %s{bcolors.WARNING} методом{bcolors.OKBLUE} %s{bcolors.WARNING}, потоків:{bcolors.OKBLUE} %d{bcolors.WARNING}!{bcolors.RESET}"
+            % (target or url.host, method, threads))
+
     event.set()
     ts = time()
+
     while time() < ts + timer:
-        logger.debug(f'{bcolors.WARNING}Ціль:{bcolors.OKBLUE} %s,{bcolors.WARNING} Порт:{bcolors.OKBLUE} %s,{bcolors.WARNING} Метод:{bcolors.OKBLUE} %s{bcolors.WARNING} PPS:{bcolors.OKBLUE} %s,{bcolors.WARNING} BPS:{bcolors.OKBLUE} %s / %d%%{bcolors.RESET}' %
-                     (target or url.host,
-                      port or (url.port or 80),
-                      method,
-                      Tools.humanformat(int(REQUESTS_SENT)),
-                      Tools.humanbytes(int(BYTES_SEND)),
-                      round((time() - ts) / timer * 100, 2)))
+        if table:
+            text_to_print.append(f'%s,%s,%s,%s,%s,%s,%d%%' % (target or url.host,
+                            port or (url.port or 80),
+                            method,
+                            threads,
+                            Tools.humanformat(int(REQUESTS_SENT)),
+                            Tools.humanbytes(int(BYTES_SEND)),
+                            round((time() - ts) / timer * 100, 2)))
+        else:
+            logger.debug(f'{bcolors.WARNING}Ціль:{bcolors.OKBLUE} %s,{bcolors.WARNING} Порт:{bcolors.OKBLUE} %s,{bcolors.WARNING} Метод:{bcolors.OKBLUE} %s{bcolors.WARNING} PPS:{bcolors.OKBLUE} %s,{bcolors.WARNING} BPS:{bcolors.OKBLUE} %s / %d%%{bcolors.RESET}' %
+                        (target or url.host,
+                        port or (url.port or 80),
+                        method,
+                        Tools.humanformat(int(REQUESTS_SENT)),
+                        Tools.humanbytes(int(BYTES_SEND)),
+                        round((time() - ts) / timer * 100, 2)))
         REQUESTS_SENT.set(0)
         BYTES_SEND.set(0)
-        sleep(1)
+        
+        sleep(5)
 
     event.clear()
     exit()
