@@ -1,5 +1,5 @@
-## Changelog
-- **28.03.2020** Додано табличний вивід `--table` (дякую, @alexneo2003) 
+## Оновлення
+- **28.03.2020** Додано табличний вивід (дуже дякую, @alexneo2003). Параметр `--debug` більше не використовується 
 - **27.03.2020** 
   - Дозволено запуск методів DBG, BOMB (дякую @drew-kun за PR) та KILLER для відповідності оригінальному MHDDoS.
   - Метод DGB оновлено, проте працездатність залишається під питанням - 
@@ -7,12 +7,17 @@
   - Метод CFB має ті самі проблеми - запит або успішний незалежно від методу, або наявна реалізація 2-ох річної давнини не здатна обійти захист. 
     Наразі не існує надійної open-source реалізації обходу захисту Cloudflare та DDoS-Guard - еффективнішим буде пошук оригінальних серверів цілі. 
   - Метод BOMB потребує значно більше RAM - зменшіть значення `-t`. Також потребує додаткових налаштувань при запуску через python - звертайтеся до [документації MHDDoS](https://github.com/MHProDev/MHDDoS).
-- **26.03.2020**
-  - Запуск усіх обраних атак, замість випадкового вибору 
-  - Зменшено використання RAM на великій кількості цілей - тепер на RAM впливає тільки параметр `-t` 
-  - Додане кешування DNS і корректна обробка проблем з резолвінгом
-- **25.03.2020** Додано режим VPN замість проксі (прапорець `--vpn`) 
-- **25.03.2020** MHDDoS включено до складу репозиторію для більшого контролю над розробкою і захистом від неочікуваних змін
+
+<details>
+  <summary>Раніше</summary>
+
+  - **26.03.2020**
+    - Запуск усіх обраних атак, замість випадкового вибору 
+    - Зменшено використання RAM на великій кількості цілей - тепер на RAM впливає тільки параметр `-t` 
+    - Додане кешування DNS і корректна обробка проблем з резолвінгом
+  - **25.03.2020** Додано режим VPN замість проксі (прапорець `--vpn`) 
+  - **25.03.2020** MHDDoS включено до складу репозиторію для більшого контролю над розробкою і захистом від неочікуваних змін
+</details>
 
 ## Опис
 
@@ -91,10 +96,6 @@ UDP - **ТУТ ОБОВ'ЯЗКОВО VPN**
 
     docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -t 3000 https://ria.ru https://tass.ru
 
-Щоб переглянути інформацію про хід атаки, додайте прапорець `--debug`
-
-    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --debug https://ria.ru https://tass.ru
-
 Змінити частоту оновлення проксі (за замовчуванням - кожні 15 хвилин) - `-p SECONDS`
 
     docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -p 1200 https://ria.ru https://tass.ru
@@ -114,8 +115,8 @@ UDP - **ТУТ ОБОВ'ЯЗКОВО VPN**
     usage: runner.py target [target ...]
                      [-t THREADS] 
                      [-p PERIOD]
+                     [-c URL]
                      [--rpc RPC] 
-                     [--debug]
                      [--http-methods METHOD [METHOD ...]]
 
     positional arguments:
@@ -126,9 +127,7 @@ UDP - **ТУТ ОБОВ'ЯЗКОВО VPN**
       -c, --config URL       URL to a config file (list of targets in plain text)
       -t, --threads 2000     Total number of threads to run (default is CPU * 1000)
       -p, --period 900       How often to update the proxies (default is 900)
-      --debug                Enable debug output from MHDDoS
       --vpn                  Disable proxies to use VPN
-      --table                Print log as table
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)
@@ -144,8 +143,6 @@ Wrapper script for running [MHDDoS](https://github.com/MHProDev/MHDDoS)
 - **No VPN required** - automatically downloads and selects working proxies for given targets
 - Support for **multiple targets** with automatic load-balancing
 - Uses multiple attack methods and switches between them
-- Simpler interface with named arguments
-- Available mode `--table` which displays the log in the form of a table
 
 ## Setup
 
@@ -191,8 +188,8 @@ Note that **python** is used instead of python3.
     usage: runner.py target [target ...]
                      [-t THREADS] 
                      [-p PERIOD]
+                     [-c URL]
                      [--rpc RPC] 
-                     [--debug]
                      [--http-methods METHOD [METHOD ...]]
 
     positional arguments:
@@ -203,9 +200,7 @@ Note that **python** is used instead of python3.
       -t, --threads 2000     Total number of threads to run (default is CPU * 1000)
       -c, --config URL       URL to a config file (list of targets in plain text)
       -p, --period 900       How often to update the proxies (default is 900)
-      --debug                Enable debug output from MHDDoS
       --vpn                  Disable proxies to use VPN
-      --table                Print log as table
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)
@@ -228,10 +223,6 @@ Target specification
 Increase load
 
     python3 runner.py -t 3000 https://tvzvezda.ru
-
-View DEBUG info (traffic)
-
-    python3 runner.py https://tvzvezda.ru --debug
 
 Change proxy update interval
 

