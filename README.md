@@ -21,6 +21,7 @@
 - Атака **декількох цілей** з автоматичним балансуванням навантаження
 - Використовує **різні методи для атаки**
 - Простий та зрозумілий інтерфейс з іменованими параметрами
+- Доступний режим `--table` що виводить лог у вигляді таблиці
 
 ### Неофіційний гайд - [Детальний розбір MHDDoS_proxy](https://github.com/SlavaUkraineSince1991/DDoS-for-all/blob/main/MHDDoS_proxy.md) 
 
@@ -128,6 +129,7 @@ UDP - **ТУТ ОБОВ'ЯЗКОВО VPN**
       -p, --period 900       How often to update the proxies (default is 900)
       --debug                Enable debug output from MHDDoS
       --vpn                  Disable proxies to use VPN
+      --table                Print log as table
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)
@@ -144,6 +146,7 @@ Wrapper script for running [MHDDoS](https://github.com/MHProDev/MHDDoS)
 - Support for **multiple targets** with automatic load-balancing
 - Uses multiple attack methods and switches between them
 - Simpler interface with named arguments
+- Available mode `--table` which displays the log in the form of a table
 
 ## Setup
 
@@ -203,6 +206,7 @@ Note that **python** is used instead of python3.
       -p, --period 900       How often to update the proxies (default is 900)
       --debug                Enable debug output from MHDDoS
       --vpn                  Disable proxies to use VPN
+      --table                Print log as table
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)

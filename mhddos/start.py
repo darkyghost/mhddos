@@ -27,8 +27,6 @@ from impacket.ImpactPacket import IP, TCP, UDP, Data
 from requests import Response, Session, get, cookies
 from yarl import URL
 
-from table_logger import TableLogger
-
 logging.basicConfig(format='[%(asctime)s - %(levelname)s] %(message)s', datefmt="%H:%M:%S")
 logger = logging.getLogger("MHDDoS")
 logger.setLevel("INFO")

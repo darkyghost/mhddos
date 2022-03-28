@@ -11,7 +11,7 @@ from threading import Thread
 import requests
 from PyRoxy import Proxy
 from yarl import URL
-from table_logger import TableLogger
+from tabulate import tabulate
 from time import sleep, time
 
 from mhddos.start import logger, Methods, bcolors as cl, main as mhddos_main
@@ -152,18 +152,24 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, debug,
         Thread(target=mhddos_main, args=params, kwargs={'debug': debug, 'text_to_print': text_to_print, 'table': table}, daemon=True).start()
 
     if table:
-        tbl = TableLogger(columns='Атакуємо,Методом,Потоків', colwidth={'Атакуємо':30,'Методом':10,'Потоків':10})
+        tabulate_text_targets = []
         for params in params_list:
-            tbl(params[1], params[0], params[3])
+            tabulate_text_targets.append((f'{cl.WARNING}%s' % params[1], params[0], f'%s{cl.RESET}' % params[3]))
+        
+        print(tabulate(tabulate_text_targets, headers=[f'{cl.OKBLUE}Атакуємо','Методом',f'Потоків{cl.RESET}'], tablefmt='fancy_grid'))
 
         ts = time()       
         while time() < ts + period:
             sleep(5)
-            cls()
-            tbl2 = TableLogger(columns='Ціль,Порт,Метод,Потоків,PPS,BPS,Прогрес', rownum=True, colwidth={'Ціль':26,'Порт':10,'Метод':10,'Потоків':10,'PPS':10,'BPS':10,'Прогрес':10})
+            cls()        
+            tabulate_text_progress = []
+
             for text in text_to_print:
                 row = text.split(',')
-                tbl2(row[0], row[1], row[2], row[3], row[4], row[5], row[6])
+                tabulate_text_progress.append((f'{cl.WARNING}%s' % row[0], row[1], row[2], row[3], row[4], row[5], f'%s{cl.RESET}' % row[6]))
+            print(tabulate(tabulate_text_progress, headers=[f'{cl.OKBLUE}Ціль','Порт','Метод','Потоків','PPS','BPS',f'Прогрес{cl.RESET}'], tablefmt='fancy_grid'))
+
+            tabulate_text_progress.clear()
             text_to_print.clear()
 
     sleep(period + 3)
