@@ -83,7 +83,7 @@ def update_proxies(period, targets):
     #  Avoid parsing proxies too often when restart happens
     if os.path.exists('files/proxies/proxies.txt'):
         last_update = os.path.getmtime('files/proxies/proxies.txt')
-        if (time.time() - last_update) < period / 2:
+        if (time() - last_update) < period / 2:
             logger.info(f'{cl.OKGREEN}Використовується список проксі з попереднього запуску{cl.RESET}')
             return
 
