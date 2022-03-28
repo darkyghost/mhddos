@@ -83,16 +83,31 @@ class Targets:
         if not self.config:
             return
 
-        try:
-            config_content = requests.get(self.config, timeout=5).text
-        except requests.RequestException:
-            logger.warning(f'{cl.FAIL}Не вдалося (пере)завантажити конфіг - буде використано останні відомі цілі{cl.RESET}')
+        # To correctly handle relative path to the local target file
+        cwd = os.getcwd()
+        os.chdir('..')
+
+        if os.path.isfile(self.config):
+            with open(self.config) as file:
+                self.config_targets = file.read().replace('\n', ' ').split()
+                logger.info(f'{cl.OKBLUE}Завантажено конфіг із локального файлу {cl.WARNING}{self.config} '
+                            f'на {len(self.config_targets)} цілей{cl.RESET}')
         else:
-            self.config_targets = [
-                target.strip()
-                for target in config_content.split()
-                if target.strip()
-            ]
+            try:
+                config_content = requests.get(self.config, timeout=5).text
+            except requests.RequestException:
+                logger.warning(f'{cl.FAIL}Не вдалося (пере)завантажити конфіг - буде використано останні відомі цілі{cl.RESET}')
+            else:
+                self.config_targets = [
+                    target.strip()
+                    for target in config_content.split()
+                    if target.strip()
+                ]
+                logger.info(f'{cl.OKBLUE}Завантажено конфіг із віддаленого серверу {cl.WARNING}{self.config} '
+                            f'на {len(self.config_targets)} цілей{cl.RESET}')
+
+        # Go back to initial working directory
+        os.chdir(cwd)
 
 
 def download_proxies():
@@ -290,7 +305,7 @@ def init_argparse() -> argparse.ArgumentParser:
     parser.add_argument(
         '-c',
         '--config',
-        help='URL to a config file',
+        help='URL to remote or path to local config file',
     )
     parser.add_argument(
         '-t',
