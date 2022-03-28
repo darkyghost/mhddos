@@ -1031,12 +1031,13 @@ class HttpFlood(Thread):
         if name == "KILLER": self.SENT_FLOOD = self.KILLER
 
 
-def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, debug=False, refl_li_fn=None, table=False, text_to_print=[]):
+def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, debug=False, refl_li_fn=None, text_to_print=None):
     port = None
     url = None
     event = Event()
     event.clear()
     target = None
+    table = text_to_print is not None
 
     if method not in Methods.ALL_METHODS:
         exit("Method Not Found %s" % ", ".join(Methods.ALL_METHODS))
@@ -1117,30 +1118,28 @@ def main(method, urlraw, ip, threads, timer, proxy_fn=None, rpc=None, debug=Fals
     ts = time()
 
     while time() < ts + timer:
+        args = (
+            target or url.host,
+            port or (url.port or 80),
+            method,
+            threads,
+            Tools.humanformat(int(REQUESTS_SENT)),
+            Tools.humanbytes(int(BYTES_SEND)),
+            round((time() - ts) / timer * 100, 2),
+        )
         if table:
-            text_to_print.append(f'%s,%s,%s,%s,%s,%s,%d%%' % (target or url.host,
-                            port or (url.port or 80),
-                            method,
-                            threads,
-                            Tools.humanformat(int(REQUESTS_SENT)),
-                            Tools.humanbytes(int(BYTES_SEND)),
-                            round((time() - ts) / timer * 100, 2)))
+            text_to_print.append(f'%s,%s,%s,%s,%s,%s,%d%%' % args)
         else:
-            logger.debug(f'{bcolors.WARNING}Ціль:{bcolors.OKBLUE} %s,{bcolors.WARNING} Порт:{bcolors.OKBLUE} %s,{bcolors.WARNING} Метод:{bcolors.OKBLUE} %s{bcolors.WARNING} PPS:{bcolors.OKBLUE} %s,{bcolors.WARNING} BPS:{bcolors.OKBLUE} %s / %d%%{bcolors.RESET}' %
-                        (target or url.host,
-                        port or (url.port or 80),
-                        method,
-                        Tools.humanformat(int(REQUESTS_SENT)),
-                        Tools.humanbytes(int(BYTES_SEND)),
-                        round((time() - ts) / timer * 100, 2)))
+            logger.debug(f'{bcolors.WARNING}Ціль:{bcolors.OKBLUE} %s,{bcolors.WARNING} Порт:{bcolors.OKBLUE} %s,{bcolors.WARNING} Метод:{bcolors.OKBLUE} %s{bcolors.WARNING} Потоків:{bcolors.OKBLUE} %s{bcolors.WARNING} PPS:{bcolors.OKBLUE} %s,{bcolors.WARNING} BPS:{bcolors.OKBLUE} %s / %d%%{bcolors.RESET}' %
+                         args)
         REQUESTS_SENT.set(0)
         BYTES_SEND.set(0)
-        
-        sleep(5)
+
+        sleep(3)
 
     event.clear()
     exit()
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main(*sys.argv)
