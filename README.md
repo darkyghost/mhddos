@@ -206,7 +206,7 @@ Note that **python** is used instead of python3.
     optional arguments:
       -h, --help             show this help message and exit
       -t, --threads 2000     Total number of threads to run (default is CPU * 1000)
-      -c, --config URL       URL to a config file (list of targets in plain text)
+      -c, --config URL/file  URL to remote or path to local config file (list of targets in plain text)
       -p, --period 900       How often to update the proxies (default is 900)
       --table                Print log as table
       --vpn                  Disable proxies to use VPN
