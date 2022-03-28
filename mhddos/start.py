@@ -136,7 +136,7 @@ class Tools:
             suffix = MULTIPLES[multiple].format("i" if binary else "")
             return f"{value:.{precision}f} {suffix}"
         else:
-            return f"-- B"
+            return f"0 B"
 
     @staticmethod
     def humanformat(num: int, precision: int = 2):
