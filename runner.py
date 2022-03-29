@@ -272,9 +272,9 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
     if debug:
         logger.setLevel(logging.DEBUG)
 
-    for bypass in ('CFB', 'DGB'):
+    for bypass in ('CFB', 'DGB', 'BYPASS'):
         if bypass in http_methods:
-            logger.warning(f'{cl.FAIL}Робота методу {bypass} не гарантована - слідкуйте за трафіком{cl.RESET}')
+            logger.warning(f'{cl.FAIL}Робота методу {bypass} не гарантована - атака методами за замовчуванням може бути ефективніша{cl.RESET}')
 
     while True:
         targets = list(get_resolvable_targets(targets_iter))

