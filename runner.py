@@ -122,8 +122,9 @@ def update_proxies(period, targets, proxy_timeout):
     future_to_proxy = {}
     with ThreadPoolExecutor(THREADS_PER_CORE) as executor:
         for target, chunk in zip(targets, (Proxies[i::size] for i in range(size))):
+            resolved_target = URL(target).with_host(resolve_host(target))
             future_to_proxy.update({
-                executor.submit(proxy.check, target, proxy_timeout): proxy
+                executor.submit(proxy.check, resolved_target, proxy_timeout): proxy
                 for proxy in chunk
             })
 
