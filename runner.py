@@ -107,7 +107,7 @@ def download_proxies():
         yield Proxy.fromString(line)
 
 
-def update_proxies(period, targets, proxy_timeout):
+def update_proxies(period, targets, threads, proxy_timeout):
     #  Avoid parsing proxies too often when restart happens
     if os.path.exists('files/proxies/proxies.txt'):
         last_update = os.path.getmtime('files/proxies/proxies.txt')
@@ -126,7 +126,7 @@ def update_proxies(period, targets, proxy_timeout):
     )
 
     future_to_proxy = {}
-    with ThreadPoolExecutor(THREADS_PER_CORE) as executor:
+    with ThreadPoolExecutor(threads) as executor:
         for target, chunk in zip(targets, (Proxies[i::size] for i in range(size))):
             resolved_target = URL(target).with_host(resolve_host(target))
             future_to_proxy.update({
@@ -290,7 +290,7 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
 
         no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
         if not no_proxies:
-            update_proxies(period, targets, proxy_timeout)
+            update_proxies(period, targets, total_threads, proxy_timeout)
         run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table)
 
 
