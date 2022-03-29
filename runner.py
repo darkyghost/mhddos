@@ -290,7 +290,7 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
 
         no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
         if not no_proxies:
-            update_proxies(period, targets, total_threads, proxy_timeout)
+            update_proxies(period, targets, max(total_threads, THREADS_PER_CORE), proxy_timeout)
         run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table)
 
 
