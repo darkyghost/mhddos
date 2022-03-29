@@ -7,6 +7,7 @@ from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 from multiprocessing import cpu_count
+from pathlib import Path
 from threading import Thread, Lock
 from time import sleep, time
 
@@ -89,31 +90,29 @@ class Targets:
         if not self.config:
             return
 
-        # To correctly handle relative path to the local target file
-        cwd = os.getcwd()
-        os.chdir('..')
-
-        if os.path.isfile(self.config):
-            with open(self.config) as file:
-                self.config_targets = file.read().replace('\n', ' ').split()
-                logger.info(f'{cl.OKBLUE}Завантажено конфіг із локального файлу {cl.WARNING}{self.config} '
-                            f'на {len(self.config_targets)} цілей{cl.RESET}')
+        path = Path('..') / self.config
+        is_local = path.is_file()
+        if is_local:
+            config_content = path.read_text()
         else:
             try:
                 config_content = requests.get(self.config, timeout=5).text
             except requests.RequestException:
                 logger.warning(f'{cl.FAIL}Не вдалося (пере)завантажити конфіг - буде використано останні відомі цілі{cl.RESET}')
-            else:
-                self.config_targets = [
-                    target.strip()
-                    for target in config_content.split()
-                    if target.strip()
-                ]
-                logger.info(f'{cl.OKBLUE}Завантажено конфіг із віддаленого серверу {cl.WARNING}{self.config} '
-                            f'на {len(self.config_targets)} цілей{cl.RESET}')
+                return
 
-        # Go back to initial working directory
-        os.chdir(cwd)
+        self.config_targets = [
+            target.strip()
+            for target in config_content.split()
+            if target.strip()
+        ]
+
+        if is_local:
+            logger.info(f'{cl.OKBLUE}Завантажено конфіг із локального файлу {cl.WARNING}{self.config} '
+                        f'на {len(self.config_targets)} цілей{cl.RESET}')
+        else:
+            logger.info(f'{cl.OKBLUE}Завантажено конфіг із віддаленого серверу {cl.WARNING}{self.config} '
+                        f'на {len(self.config_targets)} цілей{cl.RESET}')
 
 
 def download_proxies():
