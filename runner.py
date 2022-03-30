@@ -130,7 +130,7 @@ def update_proxies(period, targets, threads, proxy_timeout):
             return
 
     logger.info(f'{cl.OKGREEN}Завантажуємо список проксі...{cl.RESET}')
-    Proxies = list(download_proxies())
+    Proxies = list(set(download_proxies()))
     random.shuffle(Proxies)
 
     size = len(targets)
@@ -264,7 +264,7 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
 
 
 def get_resolvable_targets(targets):
-    targets = list(targets)
+    targets = list(set(targets))
     with ThreadPoolExecutor(len(targets)) as executor:
         future_to_target = {
             executor.submit(resolve_host, target): target
