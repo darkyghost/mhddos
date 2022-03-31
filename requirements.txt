@@ -8,3 +8,4 @@ icmplib>=2.1.1
 git+https://github.com/porthole-ascend-cinnamon/PyRoxy.git
 yarl~=1.7.2
 tabulate>=0.8.9
+colorama==0.4.4

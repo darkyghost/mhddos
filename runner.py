@@ -12,11 +12,17 @@ from threading import Thread, Lock
 from time import sleep, time
 
 import requests
-from PyRoxy import Proxy
 from tabulate import tabulate
 from yarl import URL
 
+from PyRoxy import Proxy
 from mhddos.start import logger, Methods, bcolors as cl, main as mhddos_main, Tools
+
+
+# @formatter:off
+if os.name == 'nt':
+    import colorama; colorama.init()
+# @formatter:on
 
 
 PROXIES_URL = 'https://raw.githubusercontent.com/porthole-ascend-cinnamon/proxy_scraper/main/proxies.txt'
