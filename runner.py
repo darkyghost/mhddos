@@ -246,7 +246,7 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
             total_bps += bps
             if table:
                 tabulate_text.append(
-                    (f'{cl.WARNING}%s' % k.url.host, k.url.port, k.method, k.threads, Tools.humanformat(pps), f'{Tools.humanbytes(bps)}{cl.RESET}')
+                    (f'{cl.WARNING}%s' % k.url.host, k.url.port, k.method, k.threads, Tools.humanformat(pps), f'{Tools.humanbits(bps)}{cl.RESET}')
                 )
             else:
                 logger.debug(
@@ -257,13 +257,13 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
                         k.method,
                         k.threads,
                         Tools.humanformat(pps),
-                        Tools.humanbytes(bps),
+                        Tools.humanbits(bps),
                         round((time() - ts) / period * 100, 2),
                     )
                 )
 
         if table:
-            tabulate_text.append((f'{cl.OKGREEN}Усього', '', '', '', Tools.humanformat(total_pps), f'{Tools.humanbytes(total_bps)}{cl.RESET}'))
+            tabulate_text.append((f'{cl.OKGREEN}Усього', '', '', '', Tools.humanformat(total_pps), f'{Tools.humanbits(total_bps)}{cl.RESET}'))
 
             cls()
             print_banner(vpn_mode)
