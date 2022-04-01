@@ -396,8 +396,7 @@ def print_banner(vpn_mode):
 
 - {cl.WARNING}VPN замість проксі{cl.RESET} - прапорець `--vpn`
 - {cl.WARNING}Навантаження (кількість потоків){cl.RESET} - параметр `-t 3000`, за замовчуванням - CPU * 1000
-- {cl.WARNING}Статистика у вигляді таблиці{cl.RESET} - прапорець `--table`
-- {cl.WARNING}Статистика у вигляді тексту{cl.RESET} - прапорець `--debug`
+- {cl.WARNING}Статистика у вигляді таблиці або тексту{cl.RESET} - прапорець `--table` або `--debug`
 - {cl.WARNING}Повна документація{cl.RESET} - https://github.com/porthole-ascend-cinnamon/mhddos_proxy
     ''')
 
