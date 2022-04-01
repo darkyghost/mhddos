@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import random
+import socket
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
@@ -10,7 +11,6 @@ from pathlib import Path
 from threading import Thread, Lock
 from time import sleep, time
 
-import dns.resolver
 import requests
 from tabulate import tabulate
 from yarl import URL
@@ -38,14 +38,9 @@ def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-resolver = dns.resolver.Resolver()
-resolver.nameservers = ['1.1.1.1', '1.0.0.1', '8.8.8.8', '8.8.4.4', '208.67.222.222', '208.67.220.220']
-
-
 @lru_cache(maxsize=128)
-def resolve_host(url):  # TODO: handle multiple IPs?
-    answer = resolver.resolve(URL(url).host)
-    return answer[0].to_text()
+def resolve_host(url):
+    return socket.gethostbyname(URL(url).host)
 
 
 Params = namedtuple('Params', 'url, ip, method, threads')
@@ -286,7 +281,7 @@ def get_resolvable_targets(targets):
             try:
                 future.result()
                 yield target
-            except dns.resolver.NXDOMAIN:
+            except socket.gaierror:
                 logger.warning(f'{cl.FAIL}Ціль {target} недоступна і не буде атакована{cl.RESET}')
 
 
