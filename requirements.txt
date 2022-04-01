@@ -1,6 +1,5 @@
 cfscrape<=2.1.1
 certifi<=2021.10.8
-dnspython>=2.2.0
 requests==2.27.1
 impacket==0.9.23
 psutil>=5.9.0
