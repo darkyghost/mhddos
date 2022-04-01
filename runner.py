@@ -44,7 +44,10 @@ resolver.nameservers = ['1.1.1.1', '1.0.0.1', '8.8.8.8', '8.8.4.4', '208.67.222.
 
 @lru_cache(maxsize=128)
 def resolve_host(url):  # TODO: handle multiple IPs?
-    answer = resolver.resolve(URL(url).host)
+    host = URL(url).host
+    if dns.inet.is_address(host):
+        return host
+    answer = resolver.resolve(host)
     return answer[0].to_text()
 
 
@@ -168,7 +171,7 @@ def update_proxies(period, targets, threads, proxy_timeout):
         logger.error(
             'Не знайдено робочих проксі. '
             'Переконайтеся що інтернет з`єднання стабільне і ціль доступна. '
-            'Перезапустіть Docker.'
+            'Перезапустіть Docker'
         )
         exit()
 
@@ -287,7 +290,7 @@ def get_resolvable_targets(targets):
                 future.result()
                 yield target
             except dns.resolver.NXDOMAIN:
-                logger.warning(f'{cl.FAIL}Ціль {target} недоступна і не буде атакована{cl.RESET}')
+                logger.warning(f'{cl.FAIL}Ціль {target} не резолвиться і не буде атакована{cl.RESET}')
 
 
 def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, vpn_mode, debug, table):
@@ -309,8 +312,8 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
 
         if rpc < LOW_RPC:
             logger.warning(
-                f'RPC менше за {LOW_RPC}. Це може призвести до падіння продуктивності '
-                f'через збільшення кількості перемикань кожного потоку між проксі.'
+                f'{cl.FAIL}RPC менше за {LOW_RPC}. Це може призвести до падіння продуктивності '
+                f'через збільшення кількості перепідключень{cl.RESET}'
             )
 
         no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
