@@ -123,20 +123,17 @@ google_agents = [
 
 
 class Tools:
-
     @staticmethod
-    def humanbytes(i: int, binary: bool = False, precision: int = 2):
-        MULTIPLES = [
-            "B", "k{}B", "M{}B", "G{}B", "T{}B", "P{}B", "E{}B", "Z{}B", "Y{}B"
-        ]
+    def humanbits(i: int):
+        MULTIPLES = ["Bit", "kBit", "MBit", "GBit"]
         if i > 0:
-            base = 1024 if binary else 1000
+            i *= 8
+            base = 1024
             multiple = trunc(log2(i) / log2(base))
             value = i / pow(base, multiple)
-            suffix = MULTIPLES[multiple].format("i" if binary else "")
-            return f"{value:.{precision}f} {suffix}"
+            return f'{value:.2f} {MULTIPLES[multiple]}'
         else:
-            return f"0 B"
+            return '0'
 
     @staticmethod
     def humanformat(num: int, precision: int = 2):
