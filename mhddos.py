@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import logging
-import sys
 from contextlib import suppress
 from itertools import cycle
 from math import log2, trunc
@@ -19,17 +18,16 @@ from typing import Any, List, Set, Tuple
 from urllib import parse
 from uuid import UUID, uuid4
 
-from PyRoxy import Proxy, ProxyType, ProxyUtiles, Tools as ProxyTools
 from certifi import where
 from cloudscraper import create_scraper
 from impacket.ImpactPacket import IP, TCP, UDP, Data
 from requests import Response, Session, get, cookies
 from yarl import URL
 
+from PyRoxy import Proxy, ProxyType, ProxyUtiles, Tools as ProxyTools
+from core import cl, logger
 
-logging.basicConfig(format='[%(asctime)s - %(levelname)s] %(message)s', datefmt="%H:%M:%S")
-logger = logging.getLogger("MHDDoS")
-logger.setLevel("INFO")
+
 ctx: SSLContext = create_default_context(cafile=where())
 ctx.check_hostname = False
 ctx.verify_mode = CERT_NONE
@@ -78,21 +76,9 @@ def getMyIPAddress():
     return getMyIPAddress()
 
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    RESET = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-
 def exit(*message):
     if message:
-        logger.error(bcolors.FAIL + " ".join(message) + bcolors.RESET)
+        logger.error(cl.RED + " ".join(message) + cl.RESET)
     logging.shutdown()
     _exit(1)
 

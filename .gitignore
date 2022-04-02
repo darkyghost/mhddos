@@ -2,4 +2,4 @@
 .idea/
 .venv/
 *.egg-info
-mhddos/files/proxies/proxies.txt
+files/proxies/proxies.txt
