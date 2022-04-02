@@ -1,5 +1,4 @@
 import logging
-import os
 import queue
 from collections import namedtuple
 from concurrent.futures import Future
@@ -10,7 +9,7 @@ from time import sleep, time
 from yarl import URL
 
 from cli import init_argparse
-from core import logger, cl, UDP_THREADS, LOW_RPC
+from core import logger, cl, UDP_THREADS, LOW_RPC, IT_ARMY_CONFIG_URL
 from dns_utils import resolve_host, get_resolvable_targets
 from mhddos import main as mhddos_main
 from output import AtomicCounter, show_statistic, print_banner
@@ -18,13 +17,7 @@ from proxies import update_proxies
 from targets import Targets
 
 
-# @formatter:off
-if os.name == 'nt':
-    import colorama; colorama.init()
-# @formatter:on
-
 Params = namedtuple('Params', 'url, ip, method, threads')
-
 
 class DaemonThreadPool:
     def __init__(self, num_threads):
@@ -142,10 +135,15 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
 if __name__ == '__main__':
     args = init_argparse().parse_args()
     print_banner(args.vpn_mode)
+    if args.itarmy:
+        targets = Targets([], IT_ARMY_CONFIG_URL)
+    else:
+        targets = Targets(args.targets, args.config)
+
     start(
         args.threads,
         args.period,
-        Targets(args.targets, args.config),
+        targets,
         args.rpc,
         args.proxy_timeout,
         args.http_methods,

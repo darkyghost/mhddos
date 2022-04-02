@@ -70,4 +70,9 @@ def init_argparse() -> argparse.ArgumentParser:
         default=5,
         help='How many seconds to wait for the proxy to make a connection (default is 5)'
     )
+    parser.add_argument(
+        '--itarmy',
+        action='store_true',
+        default=False,
+    )
     return parser
