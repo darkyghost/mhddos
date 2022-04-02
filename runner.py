@@ -279,7 +279,7 @@ def run_ddos(targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_
 
 def get_resolvable_targets(targets):
     targets = list(set(targets))
-    with ThreadPoolExecutor(len(targets)) as executor:
+    with ThreadPoolExecutor(min(len(targets), 10)) as executor:
         future_to_target = {
             executor.submit(resolve_host, target): target
             for target in targets
@@ -289,7 +289,7 @@ def get_resolvable_targets(targets):
             try:
                 future.result()
                 yield target
-            except dns.resolver.NXDOMAIN:
+            except dns.exception.DNSException:
                 logger.warning(f'{cl.FAIL}Ціль {target} не резолвиться і не буде атакована{cl.RESET}')
 
 
