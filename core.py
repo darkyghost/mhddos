@@ -1,6 +1,6 @@
 import logging
 
-from colorama import Fore, Style
+from colorama import Fore
 
 
 logging.basicConfig(format='[%(asctime)s - %(levelname)s] %(message)s', datefmt="%H:%M:%S")
@@ -8,6 +8,7 @@ logger = logging.getLogger('mhddos_proxy')
 logger.setLevel('INFO')
 
 PROXIES_URL = 'https://raw.githubusercontent.com/porthole-ascend-cinnamon/proxy_scraper/main/proxies.txt'
+IT_ARMY_CONFIG_URL = 'https://gist.githubusercontent.com/ddosukraine2022/f739250dba308a7a2215617b17114be9/raw/mhdos_targets_tcp.txt'
 
 PROXY_TIMEOUT = 5
 UDP_THREADS = 1
