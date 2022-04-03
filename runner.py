@@ -1,4 +1,3 @@
-import logging
 import queue
 from collections import namedtuple
 from concurrent.futures import Future
