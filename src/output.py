@@ -1,11 +1,10 @@
 import os
 from threading import Lock
-from time import time
 
 from tabulate import tabulate
 
-from core import cl, logger
-from mhddos import Tools
+from .core import cl, logger
+from .mhddos import Tools
 
 
 # @formatter:off
@@ -42,7 +41,7 @@ class AtomicCounter:
         return old
 
 
-def show_statistic(statistics, refresh_rate, table, vpn_mode, ts, period, passed):
+def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, period, passed):
     tabulate_text = []
     total_pps = 0
     total_bps = 0
@@ -58,8 +57,8 @@ def show_statistic(statistics, refresh_rate, table, vpn_mode, ts, period, passed
                 k.threads, Tools.humanformat(pps), f'{Tools.humanbits(bps)}{cl.RESET}'
             ))
         else:
-            logger.debug(
-                f'{cl.YELLOW}Ціль:{cl.BLUE} %s,{cl.YELLOW} Порт:{cl.BLUE} %s,{cl.YELLOW} Метод:{cl.BLUE} %s{cl.YELLOW} Потоків:{cl.BLUE} %s{cl.YELLOW} PPS:{cl.BLUE} %s,{cl.YELLOW} BPS:{cl.BLUE} %s / %d%%{cl.RESET}' %
+            logger.info(
+                f'{cl.YELLOW}Ціль:{cl.BLUE} %s,{cl.YELLOW} Порт:{cl.BLUE} %s,{cl.YELLOW} Метод:{cl.BLUE} %s{cl.YELLOW} Потоків:{cl.BLUE} %s{cl.YELLOW} PPS:{cl.BLUE} %s,{cl.YELLOW} BPS:{cl.BLUE} %s{cl.RESET}' %
                 (
                     k.url.host,
                     k.url.port,
@@ -67,7 +66,6 @@ def show_statistic(statistics, refresh_rate, table, vpn_mode, ts, period, passed
                     k.threads,
                     Tools.humanformat(pps),
                     Tools.humanbits(bps),
-                    round((time() - ts) / period * 100, 2),
                 )
             )
 
@@ -76,13 +74,22 @@ def show_statistic(statistics, refresh_rate, table, vpn_mode, ts, period, passed
                               f'{Tools.humanbits(total_bps)}{cl.RESET}'))
 
         cls()
-        print_banner(vpn_mode)
-        print(f'{cl.GREEN}Новий цикл через {round(period - passed)} секунд{cl.RESET}')
         print(tabulate(
             tabulate_text,
             headers=[f'{cl.BLUE}Ціль', 'Порт', 'Метод', 'Потоки', 'Запити/c', f'Трафік/c{cl.RESET}'],
             tablefmt='fancy_grid'
         ))
+        print_banner(vpn_mode)
+
+    print_progress(period, passed, proxies_cnt)
+
+
+def print_progress(period, passed, proxies_cnt):
+    logger.info(f'{cl.GREEN}Новий цикл через: {round(period - passed)} секунд{cl.RESET}')
+    if proxies_cnt:
+        logger.info(f'{cl.GREEN}Кількість проксі: {proxies_cnt}{cl.RESET}')
+    else:
+        logger.info(f'{cl.GREEN}Атака без проксі - переконайтеся що ви анонімні{cl.RESET}')
 
 
 def print_banner(vpn_mode):
@@ -93,4 +100,5 @@ def print_banner(vpn_mode):
     ''')
 
     if not vpn_mode:
-        print(f'        {cl.MAGENTA}Щоб використовувати VPN або власний IP замість проксі{cl.RESET} - додайте прапорець `--vpn`\n')
+        print(
+            f'        {cl.MAGENTA}Щоб використовувати VPN або власний IP замість проксі - додайте прапорець `--vpn`{cl.RESET}\n')

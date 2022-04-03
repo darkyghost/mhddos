@@ -1,8 +1,9 @@
 import argparse
+import random
 from multiprocessing import cpu_count
 
-from core import THREADS_PER_CORE, MAX_DEFAULT_THREADS
-from mhddos import Methods
+from .core import THREADS_PER_CORE, MAX_DEFAULT_THREADS
+from .mhddos import Methods
 
 
 def init_argparse() -> argparse.ArgumentParser:
@@ -60,9 +61,9 @@ def init_argparse() -> argparse.ArgumentParser:
         '--http-methods',
         nargs='+',
         type=str.upper,
-        default=['GET', 'POST', 'STRESS', 'BOT', 'PPS'],
+        default=[random.choice(['GET', 'PPS']), random.choice(['POST', 'STRESS'])],
         choices=Methods.LAYER7_METHODS,
-        help='List of HTTP(s) attack methods to use. Default is GET, POST, STRESS, BOT, PPS',
+        help='List of HTTP(s) attack methods to use. Default is GET|PPS + POST|STRESS',
     )
     parser.add_argument(
         '--proxy-timeout',

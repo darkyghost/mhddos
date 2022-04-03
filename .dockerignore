@@ -2,4 +2,4 @@
 .idea/
 .venv/
 *.egg-info
-files/proxies/proxies.txt
+files/proxies.txt
