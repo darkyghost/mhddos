@@ -26,6 +26,7 @@ from requests import Response, Session, get, cookies
 from yarl import URL
 
 from .core import cl, logger, ROOT_DIR
+from .referers import REFERERS
 
 
 ctx: SSLContext = create_default_context(cafile=where())
@@ -1017,7 +1018,6 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
 
     if method in Methods.LAYER7_METHODS:
         useragent_li = ROOT_DIR / "files/useragent.txt"
-        referers_li = ROOT_DIR / "files/referers.txt"
         bombardier_path = Path.home() / "go/bin/bombardier"
 
         if method == "BOMB":
@@ -1031,17 +1031,9 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
 
         if not useragent_li.exists():
             exit("The Useragent file doesn't exist ")
-        if not referers_li.exists():
-            exit("The Referer file doesn't exist ")
 
-        uagents = set(
-            a.strip()
-            for a in useragent_li.open("r+").readlines()
-        )
-        referers = set(
-            a.strip()
-            for a in referers_li.open("r+").readlines()
-        )
+        uagents = set(a.strip() for a in useragent_li.open("r+").readlines())
+        referers = set(a.strip() for a in REFERERS)
 
         if not uagents:
             exit("Empty Useragent File ")
