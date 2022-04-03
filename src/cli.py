@@ -23,7 +23,7 @@ def init_argparse() -> argparse.ArgumentParser:
         '--threads',
         type=int,
         default=min(THREADS_PER_CORE * cpu_count(), MAX_DEFAULT_THREADS),
-        help='Total number of threads to run (default is CPU * 1000)',
+        help=f'Total number of threads to run (default is CPU * {THREADS_PER_CORE})',
     )
     parser.add_argument(
         '-p',
