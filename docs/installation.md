@@ -27,8 +27,10 @@
 
 Зверніть увагу, використовується саме **python** а не python3.
 
+### Termux
+
+https://telegra.ph/mhddos-proxy-for-Android-with-Termux-03-31
+
 ### Helm
 
 https://github.com/localdotcom/mhddos-proxy-helm
-
-### Termux - [інструкції ТУТ](/docs/termux.md)
