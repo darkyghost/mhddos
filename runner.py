@@ -30,7 +30,7 @@ class DaemonThreadPool:
                     f'{cl.RED}Не вдалося запустити усі {num_threads} потоків - максимум {cnt - 50}{cl.RESET}')
                 exit()
 
-    def submit(self, fn, /, *args, **kwargs):
+    def submit(self, fn, *args, **kwargs):
         f = Future()
         w = _WorkItem(f, fn, args, kwargs)
         self._queue.put(w)
