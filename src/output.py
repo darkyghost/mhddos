@@ -3,7 +3,7 @@ from threading import Lock
 
 from tabulate import tabulate
 
-from .core import cl, logger
+from .core import cl, logger, THREADS_PER_CORE
 from .mhddos import Tools
 
 
@@ -94,7 +94,7 @@ def print_progress(period, passed, proxies_cnt):
 
 def print_banner(vpn_mode):
     print(f'''
-- {cl.YELLOW}Навантаження (кількість потоків){cl.RESET} - параметр `-t 3000`, за замовчуванням - CPU * 1000
+- {cl.YELLOW}Навантаження (кількість потоків){cl.RESET} - параметр `-t 3000`, за замовчуванням - CPU * {THREADS_PER_CORE}
 - {cl.YELLOW}Статистика у вигляді таблиці або тексту{cl.RESET} - прапорець `--table` або `--debug`
 - {cl.YELLOW}Повна документація{cl.RESET} - https://github.com/porthole-ascend-cinnamon/mhddos_proxy
     ''')
