@@ -23,6 +23,9 @@ def resolve_host(url):  # TODO: handle multiple IPs?
 
 def get_resolvable_targets(targets):
     targets = list(set(targets))
+    if not targets:
+        return targets
+
     with ThreadPoolExecutor(min(len(targets), 10)) as executor:
         future_to_target = {
             executor.submit(resolve_host, target): target
