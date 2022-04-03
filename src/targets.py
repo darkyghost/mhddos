@@ -2,7 +2,7 @@ from pathlib import Path
 
 import requests
 
-from core import logger, cl
+from .core import logger, cl
 
 
 class Targets:

