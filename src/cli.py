@@ -61,9 +61,9 @@ def init_argparse() -> argparse.ArgumentParser:
         '--http-methods',
         nargs='+',
         type=str.upper,
-        default=[random.choice(['GET', 'PPS']), random.choice(['POST', 'STRESS'])],
+        default=['GET', random.choice(['POST', 'STRESS'])],
         choices=Methods.LAYER7_METHODS,
-        help='List of HTTP(s) attack methods to use. Default is GET|PPS + POST|STRESS',
+        help='List of HTTP(s) attack methods to use. Default is GET + POST|STRESS',
     )
     parser.add_argument(
         '--proxy-timeout',
