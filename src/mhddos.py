@@ -1032,7 +1032,8 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
         if not useragent_li.exists():
             exit("The Useragent file doesn't exist ")
 
-        uagents = set(a.strip() for a in useragent_li.open("r+").readlines())
+        with useragent_li.open("r+") as f:
+            uagents = set(a.strip() for a in f.readlines())
         referers = set(a.strip() for a in REFERERS)
 
         if not uagents:
@@ -1061,10 +1062,11 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
             refl_li = ROOT_DIR / "files" / refl_li_fn
             if not refl_li.exists():
                 exit("The reflector file doesn't exist")
-            ref = set(
-                a.strip()
-                for a in ProxyTools.Patterns.IP.findall(refl_li.open("r+").read())
-            )
+            with refl_li.open("r+") as f:
+                ref = set(
+                    a.strip()
+                    for a in ProxyTools.Patterns.IP.findall(f.read())
+                )
             if not ref:
                 exit("Empty Reflector File ")
 
