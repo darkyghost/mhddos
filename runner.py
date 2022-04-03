@@ -14,6 +14,7 @@ from src.dns_utils import resolve_host, get_resolvable_targets
 from src.mhddos import main as mhddos_main
 from src.output import AtomicCounter, show_statistic, print_banner, print_progress
 from src.proxies import update_proxies
+from src.system import fix_ulimits
 from src.targets import Targets
 
 
@@ -135,6 +136,7 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
 if __name__ == '__main__':
     args = init_argparse().parse_args()
     print_banner(args.vpn_mode)
+    fix_ulimits()
     if args.itarmy:
         targets = Targets([], IT_ARMY_CONFIG_URL)
     else:
