@@ -19,7 +19,7 @@ from src.targets import Targets
 
 Params = namedtuple('Params', 'url, ip, method, threads')
 
-PAD_THREADS = 50
+PAD_THREADS = 30
 
 TERMINATE = object()
 
@@ -37,6 +37,9 @@ class DaemonThreadPool:
                 for _ in range(PAD_THREADS):
                     self._queue.put(TERMINATE)
                 threads_started = cnt - PAD_THREADS
+                if threads_started <= 0:
+                    logger.warning(f'{cl.RED}Не вдалося запустити атаку - вичерпано ліміт потоків системи{threads_started}{cl.RESET}')
+                    exit()
                 logger.warning(
                     f'{cl.RED}Не вдалося запустити усі {num_threads} потоків - лише {threads_started}{cl.RESET}'
                 )
