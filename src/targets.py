@@ -40,4 +40,4 @@ class Targets:
             if target.strip()
         ]
 
-        logger.info(f'{cl.BLUE}Завантажено конфіг {cl.YELLOW}{self.config} на {len(self.config_targets)} цілей{cl.RESET}')
+        logger.info(f'{cl.YELLOW}Завантажено конфіг {self.config} на {cl.BLUE}{len(self.config_targets)} цілей{cl.RESET}')
