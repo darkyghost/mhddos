@@ -19,17 +19,29 @@ from src.targets import Targets
 
 Params = namedtuple('Params', 'url, ip, method, threads')
 
+PAD_THREADS = 50
+
+TERMINATE = object()
+
 
 class DaemonThreadPool:
-    def __init__(self, num_threads):
+    def __init__(self):
         self._queue = queue.SimpleQueue()
+
+    def start(self, num_threads):
+        threads_started = num_threads
         for cnt in range(num_threads):
             try:
                 Thread(target=self._worker, daemon=True).start()
             except RuntimeError:
+                for _ in range(PAD_THREADS):
+                    self._queue.put(TERMINATE)
+                threads_started = cnt - PAD_THREADS
                 logger.warning(
-                    f'{cl.RED}Не вдалося запустити усі {num_threads} потоків - максимум {cnt - 50}{cl.RESET}')
-                exit()
+                    f'{cl.RED}Не вдалося запустити усі {num_threads} потоків - лише {threads_started}{cl.RESET}'
+                )
+                break
+        return threads_started
 
     def submit(self, fn, *args, **kwargs):
         f = Future()
@@ -40,6 +52,9 @@ class DaemonThreadPool:
     def _worker(self):
         while True:
             work_item = self._queue.get(block=True)
+            if work_item is TERMINATE:
+                return
+
             if work_item is not None:
                 work_item.run()
                 del work_item
@@ -110,11 +125,15 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
 
     for bypass in ('CFB', 'DGB', 'BYPASS'):
         if bypass in http_methods:
-            logger.warning(f'{cl.RED}Робота методу {bypass} не гарантована - атака методами за замовчуванням може бути ефективніша{cl.RESET}')
+            logger.warning(
+                f'{cl.RED}Робота методу {bypass} не гарантована - атака методами '
+                f'за замовчуванням може бути ефективніша{cl.RESET}'
+            )
 
-    thread_pool = DaemonThreadPool(total_threads)
+    thread_pool = DaemonThreadPool()
+    total_threads = thread_pool.start(total_threads)  # It is possible that not all threads were started
     while True:
-        targets = list(get_resolvable_targets(targets_iter))
+        targets = list(get_resolvable_targets(targets_iter, thread_pool))
         if not targets:
             logger.error(f'{cl.RED}Не знайдено жодної доступної цілі{cl.RESET}')
             exit()
