@@ -9,6 +9,7 @@ from yarl import URL
 
 from .core import logger, cl, PROXIES_URL, ROOT_DIR
 from .dns_utils import resolve_host
+from .system import read_or_fetch
 
 
 def download_proxies():
@@ -17,17 +18,30 @@ def download_proxies():
         yield Proxy.fromString(line)
 
 
-def update_proxies(thread_pool, period, targets, proxy_timeout):
+def update_proxies(thread_pool, period, targets, proxy_timeout, proxies_file):
+    if proxies_file:
+        content = read_or_fetch(proxies_file)
+        if content is None:
+            logger.error(f'{cl.RED}Не вдалося зчитати проксі з {proxies_file}{cl.RESET}')
+            exit()
+        proxies = ProxyUtiles.parseAll([prox for prox in content.split()])
+        if not proxies:
+            logger.error(f'{cl.RED}У {proxies_file} не знайдено проксі - перевірте формат{cl.RESET}')
+            exit()
+
+        logger.info(f'{cl.YELLOW}Зчитано {cl.BLUE}{len(proxies)}{cl.YELLOW} проксі{cl.RESET}')
+        return proxies
+
     #  Avoid parsing proxies too often when restart happens
-    proxies_file = ROOT_DIR / 'files/proxies.txt'
-    if proxies_file.exists():
-        last_update = os.path.getmtime(proxies_file)
+    proxies_cache_file = ROOT_DIR / 'files/proxies.txt'
+    if proxies_cache_file.exists():
+        last_update = os.path.getmtime(proxies_cache_file)
         if (time() - last_update) < period / 2:
-            proxies = ProxyUtiles.readFromFile(str(proxies_file))
-            logger.info(f'{cl.GREEN}Використовується список {len(proxies)} проксі з попереднього запуску{cl.RESET}')
+            proxies = ProxyUtiles.readFromFile(str(proxies_cache_file))
+            logger.info(f'{cl.YELLOW}Використовується список {cl.BLUE}{len(proxies)}{cl.YELLOW} проксі з попереднього запуску{cl.RESET}')
             return proxies
 
-    logger.info(f'{cl.GREEN}Завантажуємо список проксі...{cl.RESET}')
+    logger.info(f'{cl.YELLOW}Завантажуємо список проксі...{cl.RESET}')
     proxies = list(set(download_proxies()))
     random.shuffle(proxies)
 
@@ -60,7 +74,7 @@ def update_proxies(thread_pool, period, targets, proxy_timeout):
 
     logger.info(f'{cl.YELLOW}Знайдено робочих проксі: {cl.BLUE}{len(working_proxies):,}{cl.RESET}')
 
-    with proxies_file.open('w') as wr:
+    with proxies_cache_file.open('w') as wr:
         for proxy in working_proxies:
             wr.write(str(proxy) + '\n')
 

