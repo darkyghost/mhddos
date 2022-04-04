@@ -1,8 +1,5 @@
-from pathlib import Path
-
-import requests
-
 from .core import logger, cl
+from .system import read_or_fetch
 
 
 class Targets:
@@ -32,16 +29,10 @@ class Targets:
         if not self.config:
             return
 
-        path = Path(self.config)
-        is_local = path.is_file()
-        if is_local:
-            config_content = path.read_text()
-        else:
-            try:
-                config_content = requests.get(self.config, timeout=5).text
-            except requests.RequestException:
-                logger.warning(f'{cl.RED}Не вдалося (пере)завантажити конфіг - буде використано останні відомі цілі{cl.RESET}')
-                return
+        config_content = read_or_fetch(self.config)
+        if config_content is None:
+            logger.warning(f'{cl.RED}Не вдалося (пере)завантажити конфіг{cl.RESET}')
+            return
 
         self.config_targets = [
             target.strip()
@@ -49,9 +40,4 @@ class Targets:
             if target.strip()
         ]
 
-        if is_local:
-            logger.info(f'{cl.BLUE}Завантажено конфіг із локального файлу {cl.YELLOW}{self.config} '
-                        f'на {len(self.config_targets)} цілей{cl.RESET}')
-        else:
-            logger.info(f'{cl.BLUE}Завантажено конфіг із віддаленого серверу {cl.YELLOW}{self.config} '
-                        f'на {len(self.config_targets)} цілей{cl.RESET}')
+        logger.info(f'{cl.BLUE}Завантажено конфіг {cl.YELLOW}{self.config} на {len(self.config_targets)} цілей{cl.RESET}')

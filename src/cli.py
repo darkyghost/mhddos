@@ -16,7 +16,7 @@ def init_argparse() -> argparse.ArgumentParser:
     parser.add_argument(
         '-c',
         '--config',
-        help='URL to remote or path to local config file',
+        help='URL or local path to file with attack targets',
     )
     parser.add_argument(
         '-t',
@@ -70,6 +70,10 @@ def init_argparse() -> argparse.ArgumentParser:
         type=float,
         default=5,
         help='How many seconds to wait for the proxy to make a connection (default is 5)'
+    )
+    parser.add_argument(
+        '--proxies',
+        help='URL or local path to file with proxies to use',
     )
     parser.add_argument(
         '--itarmy',

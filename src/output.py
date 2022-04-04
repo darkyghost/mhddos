@@ -85,11 +85,11 @@ def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, perio
 
 
 def print_progress(period, passed, proxies_cnt):
-    logger.info(f'{cl.GREEN}Новий цикл через: {round(period - passed)} секунд{cl.RESET}')
+    logger.info(f'{cl.YELLOW}Новий цикл через: {cl.BLUE}{round(period - passed)} секунд{cl.RESET}')
     if proxies_cnt:
-        logger.info(f'{cl.GREEN}Кількість проксі: {proxies_cnt}{cl.RESET}')
+        logger.info(f'{cl.YELLOW}Кількість проксі: {cl.BLUE}{proxies_cnt}{cl.RESET}')
     else:
-        logger.info(f'{cl.GREEN}Атака без проксі - переконайтеся що ви анонімні{cl.RESET}')
+        logger.info(f'{cl.YELLOW}Атака без проксі - переконайтеся що ви анонімні{cl.RESET}')
 
 
 def print_banner(vpn_mode):

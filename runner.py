@@ -65,7 +65,7 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
             for method in http_methods:
                 params_list.append(Params(target, ip, method, threads))
 
-    logger.info(f'{cl.GREEN}Запускаємо атаку...{cl.RESET}')
+    logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
     statistics = {}
     event = Event()
     event.set()
@@ -104,7 +104,7 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
     event.clear()
 
 
-def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, vpn_mode, debug, table):
+def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods, proxies_file, vpn_mode, debug, table):
     if table:
         debug = False
 
@@ -128,7 +128,7 @@ def start(total_threads, period, targets_iter, rpc, proxy_timeout, http_methods,
         no_proxies = vpn_mode or all(target.lower().startswith('udp://') for target in targets)
         proxies = []
         if not no_proxies:
-            proxies = update_proxies(thread_pool, period, targets, proxy_timeout)
+            proxies = update_proxies(thread_pool, period, targets, proxy_timeout, proxies_file)
         run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table)
 
 
@@ -148,6 +148,7 @@ if __name__ == '__main__':
         args.rpc,
         args.proxy_timeout,
         args.http_methods,
+        args.proxies,
         args.vpn_mode,
         args.debug,
         args.table,
