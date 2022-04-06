@@ -7,13 +7,6 @@ from .core import cl, logger, THREADS_PER_CORE
 from .mhddos import Tools
 
 
-# @formatter:off
-if os.name == 'nt':
-    import colorama
-    colorama.init()
-# @formatter:on
-
-
 def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 

@@ -5,6 +5,7 @@ from concurrent.futures.thread import _WorkItem
 from threading import Thread, Event
 from time import sleep, time
 
+import colorama
 from yarl import URL
 
 from src.cli import init_argparse
@@ -16,6 +17,8 @@ from src.proxies import update_proxies
 from src.system import fix_ulimits
 from src.targets import Targets
 
+
+colorama.init()
 
 Params = namedtuple('Params', 'url, ip, method, threads')
 
