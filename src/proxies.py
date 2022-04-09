@@ -33,5 +33,5 @@ def update_proxies(proxies_file):
         logger.error(f'{cl.RED}Не знайдено робочих проксі - спробуйте трохи згодом{cl.RESET}')
         exit()
 
-    logger.info(f'{cl.YELLOW}Отримано добірку {cl.BLUE}{len(working_proxies):,}{cl.YELLOW} проксі{cl.RESET}')
+    logger.info(f'{cl.YELLOW}Отримано персональну вибірку {cl.BLUE}{len(working_proxies):,}{cl.YELLOW} проксі{cl.RESET}')
     return working_proxies
