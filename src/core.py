@@ -12,6 +12,7 @@ ROOT_DIR = Path(__file__).parent.parent
 
 PROXIES_URL = 'https://raw.githubusercontent.com/porthole-ascend-cinnamon/proxy_scraper/main/proxies.txt'
 IT_ARMY_CONFIG_URL = 'https://gist.githubusercontent.com/ddosukraine2022/f739250dba308a7a2215617b17114be9/raw/mhdos_targets_tcp.txt'
+UASHIELD_CONFIG_URL = 'https://cdn.uashield.cc/sites.txt'
 
 PROXY_TIMEOUT = 5
 UDP_THREADS = 1

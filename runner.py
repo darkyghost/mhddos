@@ -9,7 +9,7 @@ import colorama
 from yarl import URL
 
 from src.cli import init_argparse
-from src.core import logger, cl, UDP_THREADS, LOW_RPC, IT_ARMY_CONFIG_URL
+from src.core import logger, cl, UDP_THREADS, LOW_RPC, IT_ARMY_CONFIG_URL, UASHIELD_CONFIG_URL
 from src.dns_utils import resolve_host, get_resolvable_targets
 from src.mhddos import main as mhddos_main
 from src.output import AtomicCounter, show_statistic, print_banner, print_progress
@@ -143,6 +143,8 @@ def start(args):
     total_threads = thread_pool.start(args.threads)  # It is possible that not all threads were started
     if args.itarmy:
         targets_iter = Targets([], IT_ARMY_CONFIG_URL)
+    elif args.uashield:
+        targets_iter = Targets([], UASHIELD_CONFIG_URL)
     else:
         targets_iter = Targets(args.targets, args.config)
 
