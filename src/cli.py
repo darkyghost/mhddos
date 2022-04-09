@@ -26,13 +26,6 @@ def init_argparse() -> argparse.ArgumentParser:
         help=f'Total number of threads to run (default is CPU * {THREADS_PER_CORE})',
     )
     parser.add_argument(
-        '-p',
-        '--period',
-        type=int,
-        default=900,
-        help='How often to update the proxies (in seconds) (default is 900)',
-    )
-    parser.add_argument(
         '--rpc',
         type=int,
         default=2000,
@@ -66,12 +59,6 @@ def init_argparse() -> argparse.ArgumentParser:
         help='List of HTTP(s) attack methods to use. Default is GET + POST|STRESS',
     )
     parser.add_argument(
-        '--proxy-timeout',
-        type=float,
-        default=5,
-        help='How many seconds to wait for the proxy to make a connection (default is 5)'
-    )
-    parser.add_argument(
         '--proxies',
         help='URL or local path to file with proxies to use',
     )
@@ -85,4 +72,7 @@ def init_argparse() -> argparse.ArgumentParser:
         action='store_true',
         default=False,
     )
+
+    parser.add_argument('-p', '--period', type=int, help='DEPRECATED')
+    parser.add_argument('--proxy-timeout', type=float, help='DEPRECATED')
     return parser
