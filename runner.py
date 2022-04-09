@@ -162,7 +162,7 @@ def start(args):
         if not no_proxies:
             proxies = update_proxies(args.proxies)
 
-        period = 120
+        period = 300
         run_ddos(
             thread_pool,
             proxies,
