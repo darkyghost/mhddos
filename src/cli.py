@@ -67,11 +67,6 @@ def init_argparse() -> argparse.ArgumentParser:
         action='store_true',
         default=False,
     )
-    parser.add_argument(
-        '--uashield',
-        action='store_true',
-        default=False,
-    )
 
     parser.add_argument('-p', '--period', type=int, help='DEPRECATED')
     parser.add_argument('--proxy-timeout', type=float, help='DEPRECATED')
