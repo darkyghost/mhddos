@@ -41,7 +41,7 @@ class DaemonThreadPool:
                     self._queue.put(TERMINATE)
                 threads_started = cnt - PAD_THREADS
                 if threads_started <= 0:
-                    logger.warning(f'{cl.RED}Не вдалося запустити атаку - вичерпано ліміт потоків системи{threads_started}{cl.RESET}')
+                    logger.warning(f'{cl.RED}Не вдалося запустити атаку - вичерпано ліміт потоків системи{cl.RESET}')
                     exit()
                 logger.warning(
                     f'{cl.RED}Не вдалося запустити усі {num_threads} потоків - лише {threads_started}{cl.RESET}'
