@@ -66,7 +66,7 @@ class DaemonThreadPool:
                 del work_item
 
 
-def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_methods, vpn_mode, proxy_timeout, debug, table):
+def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_methods, vpn_mode, debug, table):
     threads_per_target = total_threads // len(targets)
     params_list = []
     for target in targets:
@@ -96,7 +96,6 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
         kwargs = {
             **params._asdict(),
             'rpc': rpc,
-            'sock_timeout': proxy_timeout,
 
             'thread_pool': thread_pool,
             'event': event,
@@ -163,18 +162,18 @@ def start(args):
         no_proxies = args.vpn_mode or all(target.lower().startswith('udp://') for target in targets)
         proxies = []
         if not no_proxies:
-            proxies = update_proxies(thread_pool, args.period, targets, args.proxy_timeout, args.proxies)
+            proxies = update_proxies(args.proxies)
 
+        period = 120
         run_ddos(
             thread_pool,
             proxies,
             targets,
             total_threads,
-            args.period,
+            period,
             args.rpc,
             args.http_methods,
             args.vpn_mode,
-            args.proxy_timeout,
             args.debug,
             args.table
         )

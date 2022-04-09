@@ -36,7 +36,7 @@ ctx.verify_mode = CERT_NONE
 __version__: str = "2.4 SNAPSHOT"
 __ip__: Any = None
 
-SOCK_TIMEOUT = 5
+SOCK_TIMEOUT = 8
 
 
 class AtomicCounter:
@@ -1007,11 +1007,9 @@ class HttpFlood:
         if name == "KILLER": self.SENT_FLOOD = self.KILLER
 
 
-def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_li_fn=None, statistics=None, sock_timeout=5):
+def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_li_fn=None, statistics=None):
     REQUESTS_SENT = statistics['requests']
     BYTES_SEND = statistics['bytes']
-    global SOCK_TIMEOUT
-    SOCK_TIMEOUT = sock_timeout
 
     if method not in Methods.ALL_METHODS:
         exit("Method Not Found %s" % ", ".join(Methods.ALL_METHODS))

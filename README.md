@@ -6,6 +6,7 @@
 
 ### ⏱ Останні оновлення
 
+- **09.04.2022** Нова система проксі - тепер кожен отримує ~200 проксі для атаки з загального пулу ~6000 штук. Параметри `-p` (`--period`) та `--proxy-timeout` більше не використовуються
 - **04.04.2022** Додано можливість використання власного списку проксі для атаки - [інструкція](#власні-проксі)
 - **03.04.2022** Виправлена помилка Too many open files (дякую, @kobzar-darmogray та @euclid-catoptrics)
 
@@ -76,13 +77,11 @@
 
     usage: runner.py target [target ...]
                      [-t THREADS] 
-                     [-p PERIOD]
                      [-c URL]
                      [--table]
                      [--debug]
                      [--vpn]
                      [--rpc RPC] 
-                     [--proxy-timeout TIMEOUT]
                      [--http-methods METHOD [METHOD ...]]
 
     positional arguments:
@@ -92,12 +91,10 @@
       -h, --help             show this help message and exit
       -c, --config URL|path  URL or local path to file with attack targets
       -t, --threads 2000     Total number of threads to run (default is CPU * 1000)
-      -p, --period 900       How often to update the proxies (default is 900)
       --table                Print log as table
       --debug                Print log as text
       --vpn                  Disable proxies to use VPN
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
-      --proxy-timeout 5      How many seconds to wait for the proxy to make a connection (default is 5)
       --proxies URL|path     URL or local path to file with proxies to use
       --http-methods GET     List of HTTP(s) attack methods to use.
                              (default is GET, POST, STRESS, BOT, PPS)
