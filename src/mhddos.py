@@ -36,7 +36,7 @@ ctx.verify_mode = CERT_NONE
 __version__: str = "2.4 SNAPSHOT"
 __ip__: Any = None
 
-SOCK_TIMEOUT = 8
+SOCK_TIMEOUT = 10
 
 
 class AtomicCounter:
