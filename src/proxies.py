@@ -1,16 +1,11 @@
+import time
+
 import requests
 
 from PyRoxy import ProxyUtiles
 from .core import logger, cl, PROXIES_URL
+from .load_proxies import _O0O00000O0OOOOOO0
 from .system import read_or_fetch
-
-
-# @formatter:off
-before = set(globals().keys())
-# noinspection PyUnresolvedReferences
-from .load_proxies import *
-decrypt_proxies = globals()[set(globals().keys()).difference(before).pop()]
-# @formatter:on
 
 
 def update_proxies(proxies_file):
@@ -27,11 +22,11 @@ def update_proxies(proxies_file):
         logger.info(f'{cl.YELLOW}Зчитано {cl.BLUE}{len(proxies)}{cl.YELLOW} проксі{cl.RESET}')
         return proxies
 
-    logger.info(f'{cl.MAGENTA}Увага, оновлення! Можливе зниження трафіку, в обмін на збільшення загальної кількості IP, що атакують{cl.RESET}')
+    logger.info(f'{cl.MAGENTA}Увага, зміни! Можливе зниження трафіку, в обмін на збільшення загальної кількості IP, що атакують{cl.RESET}')
     logger.info(f'{cl.YELLOW}Завантажуємо список проксі...{cl.RESET}')
-    raw = requests.get(PROXIES_URL, timeout=20).text
+    raw = requests.get(PROXIES_URL, timeout=20).content
     try:
-        working_proxies = ProxyUtiles.parseAll(decrypt_proxies(raw))
+        working_proxies = ProxyUtiles.parseAll(_O0O00000O0OOOOOO0(raw))
     except Exception:
         working_proxies = []
     if not working_proxies:
