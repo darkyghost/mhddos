@@ -6,10 +6,10 @@ from .system import read_or_fetch
 
 
 # @formatter:off
-before = set(globals().keys())
+_globals_before = set(globals().keys()).union({'_globals_before'})
 # noinspection PyUnresolvedReferences
 from .load_proxies import *
-decrypt_proxies = globals()[set(globals().keys()).difference(before).pop()]
+decrypt_proxies = globals()[set(globals().keys()).difference(_globals_before).pop()]
 # @formatter:on
 
 
