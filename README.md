@@ -57,6 +57,7 @@
 - [Детальний розбір MHDDoS_proxy](https://github.com/SlavaUkraineSince1991/DDoS-for-all/blob/main/MHDDoS_proxy.md)
 - [Utility for converting shared targets into config format](https://github.com/kobzar-darmogray/mhddos_proxy_utils)
 - [Аналіз засобу mhddos_proxy](https://telegra.ph/Anal%D1%96z-zasobu-mhddos-proxy-04-01)
+- [Приклад запуску через docker на OpenWRT](https://youtu.be/MlL6fuDcWlI)
 
 ### 🚨 Попередження щодо деяких методів атаки
 Метод **BYPASS** - це повільна версія методу GET, має сумнівну ефективність через відсутність помітної реалізації обходу захисту.
