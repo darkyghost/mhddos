@@ -18,18 +18,17 @@ from typing import Any, List, Set, Tuple
 from urllib import parse
 from uuid import UUID, uuid4
 
-from PyRoxy import Proxy, ProxyType, ProxyUtiles, Tools as ProxyTools
-from certifi import where
 from cloudscraper import create_scraper
-from impacket.ImpactPacket import IP, TCP, UDP, Data
 from requests import Response, Session, get, cookies
 from yarl import URL
 
+from PyRoxy import Proxy, ProxyType, Tools as ProxyTools
+from .ImpactPacket import IP, TCP, UDP, Data
 from .core import cl, logger, ROOT_DIR
 from .referers import REFERERS
 
 
-ctx: SSLContext = create_default_context(cafile=where())
+ctx: SSLContext = create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = CERT_NONE
 
