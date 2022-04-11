@@ -1,11 +1,8 @@
 cloudscraper>=1.2.60
-certifi<=2021.10.8
+certifi==2021.10.8
 requests==2.27.1
-impacket==0.9.23
-psutil>=5.9.0
-icmplib>=2.1.1
 git+https://github.com/porthole-ascend-cinnamon/PyRoxy.git
-yarl~=1.7.2
-tabulate>=0.8.9
+yarl==1.7.2
+tabulate==0.8.9
 colorama==0.4.4
 dnspython==2.2.1
