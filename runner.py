@@ -145,6 +145,7 @@ def start(args):
     else:
         targets_iter = Targets(args.targets, args.config)
 
+    proxies = []
     while True:
         targets = list(get_resolvable_targets(targets_iter, thread_pool))
         if not targets:
@@ -158,9 +159,10 @@ def start(args):
             )
 
         no_proxies = args.vpn_mode or all(target.lower().startswith('udp://') for target in targets)
-        proxies = []
-        if not no_proxies:
-            proxies = update_proxies(args.proxies)
+        if no_proxies:
+            proxies = []
+        else:
+            proxies = update_proxies(args.proxies, proxies)
 
         period = 300
         run_ddos(

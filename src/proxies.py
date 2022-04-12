@@ -1,5 +1,3 @@
-import requests
-
 from PyRoxy import ProxyUtiles
 from .core import logger, cl, PROXIES_URL
 from .system import read_or_fetch
@@ -13,30 +11,45 @@ decrypt_proxies = globals()[set(globals().keys()).difference(_globals_before).po
 # @formatter:on
 
 
-def update_proxies(proxies_file):
+def update_proxies(proxies_file, previous_proxies):
     if proxies_file:
-        content = read_or_fetch(proxies_file)
-        if content is None:
-            logger.error(f'{cl.RED}Не вдалося зчитати проксі з {proxies_file}{cl.RESET}')
-            exit()
-        proxies = ProxyUtiles.parseAll([prox for prox in content.split()])
-        if not proxies:
-            logger.error(f'{cl.RED}У {proxies_file} не знайдено проксі - перевірте формат{cl.RESET}')
+        proxies = load_provided_proxies(proxies_file)
+    else:
+        proxies = load_system_proxies()
+
+    if not proxies:
+        if previous_proxies:
+            proxies = previous_proxies
+            logger.warning(f'{cl.MAGENTA}Буде використано попередній список проксі{cl.RESET}')
+        else:
+            logger.error(f'{cl.RED}Не знайдено робочих проксі - зупиняємо атаку{cl.RESET}')
             exit()
 
+    return proxies
+
+
+def load_provided_proxies(proxies_file):
+    content = read_or_fetch(proxies_file)
+    if content is None:
+        logger.warning(f'{cl.RED}Не вдалося зчитати проксі з {proxies_file}{cl.RESET}')
+        return None
+
+    proxies = ProxyUtiles.parseAll([prox for prox in content.split()])
+    if not proxies:
+        logger.warning(f'{cl.RED}У {proxies_file} не знайдено проксі - перевірте формат{cl.RESET}')
+    else:
         logger.info(f'{cl.YELLOW}Зчитано {cl.BLUE}{len(proxies)}{cl.YELLOW} проксі{cl.RESET}')
-        return proxies
+    return proxies
 
-    logger.info(f'{cl.MAGENTA}Увага, оновлення! Можливе зниження трафіку, в обмін на збільшення загальної кількості IP, що атакують{cl.RESET}')
-    logger.info(f'{cl.YELLOW}Завантажуємо список проксі...{cl.RESET}')
-    raw = requests.get(PROXIES_URL, timeout=20).text
+
+def load_system_proxies():
+    raw = read_or_fetch(PROXIES_URL)
     try:
-        working_proxies = ProxyUtiles.parseAll(decrypt_proxies(raw))
+        proxies = ProxyUtiles.parseAll(decrypt_proxies(raw))
     except Exception:
-        working_proxies = []
-    if not working_proxies:
-        logger.error(f'{cl.RED}Не знайдено робочих проксі - спробуйте трохи згодом{cl.RESET}')
-        exit()
-
-    logger.info(f'{cl.YELLOW}Отримано персональну вибірку {cl.BLUE}{len(working_proxies):,}{cl.YELLOW} проксі{cl.RESET}')
-    return working_proxies
+        proxies = []
+    if proxies:
+        logger.info(f'{cl.YELLOW}Отримано персональну вибірку {cl.BLUE}{len(proxies):,}{cl.YELLOW} проксі{cl.RESET}')
+    else:
+        logger.warning(f'{cl.RED}Не вдалося отримати персональну вибірку проксі{cl.RESET}')
+    return proxies
