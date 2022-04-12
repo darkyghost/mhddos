@@ -31,7 +31,7 @@ class Targets:
 
         config_content = read_or_fetch(self.config)
         if config_content is None:
-            logger.warning(f'{cl.RED}Не вдалося (пере)завантажити конфіг{cl.RESET}')
+            logger.warning(f'{cl.MAGENTA}Не вдалося (пере)завантажити конфіг{cl.RESET}')
             return
 
         self.config_targets = [

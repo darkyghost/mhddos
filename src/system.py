@@ -1,3 +1,4 @@
+import time
 from contextlib import suppress
 from pathlib import Path
 
@@ -22,8 +23,12 @@ def read_or_fetch(name):
     if is_local:
         return path.read_text()
 
-    try:
-        content = requests.get(name, timeout=5).text
-        return content
-    except requests.RequestException:
-        return None
+    attempts = 4
+    for attempt in range(attempts):
+        try:
+            response = requests.get(name, timeout=10)
+            return response.text
+        except requests.RequestException:
+            if attempt != attempts - 1:
+                time.sleep(attempt + 1)
+    return None
