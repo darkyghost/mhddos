@@ -147,10 +147,18 @@ def start(args):
 
     proxies = []
     while True:
-        targets = list(get_resolvable_targets(targets_iter, thread_pool))
-        if not targets:
-            logger.error(f'{cl.RED}Не знайдено жодної доступної цілі{cl.RESET}')
-            exit()
+        while True:
+            raw_targets = list(targets_iter)
+            if not raw_targets:
+                logger.error(f'{cl.RED}Не вказано жодної цілі для атаки{cl.RESET}')
+                exit()
+
+            targets = list(get_resolvable_targets(raw_targets, thread_pool))
+            if targets:
+                break
+            else:
+                logger.warning(f'{cl.RED}Не знайдено жодної доступної цілі - чекаємо 30 сек до наступної перевірки{cl.RESET}')
+                sleep(30)
 
         if args.rpc < LOW_RPC:
             logger.warning(
