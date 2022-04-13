@@ -12,9 +12,9 @@ from yarl import URL
 
 from src.cli import init_argparse
 from src.core import logger, cl, UDP_THREADS, LOW_RPC, IT_ARMY_CONFIG_URL
-from src.dns_utils import resolve_host, get_resolvable_targets, check_country
+from src.dns_utils import resolve_host, get_resolvable_targets
 from src.mhddos import main as mhddos_main
-from src.output import AtomicCounter, show_statistic, print_banner, print_progress, putin_huilo
+from src.output import AtomicCounter, show_statistic, print_banner, print_progress
 from src.proxies import update_proxies
 from src.system import fix_ulimits
 from src.targets import Targets
@@ -169,8 +169,6 @@ def start(args):
         if no_proxies:
             proxies = []
         else:
-            if check_country():
-                putin_huilo()
             proxies = update_proxies(args.proxies, proxies)
 
         period = 300

@@ -1,5 +1,4 @@
 from .core import logger, cl
-from .output import putin_huilo
 from .system import read_or_fetch
 
 
@@ -15,10 +14,6 @@ class Targets:
             yield self.prepare_target(target)
 
     def prepare_target(self, target):
-        target = target.strip().lower()
-        if target.endswith('.ua'):
-            putin_huilo()
-
         if '://' in target:
             return target
 

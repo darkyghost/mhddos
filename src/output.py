@@ -96,9 +96,3 @@ def print_banner(vpn_mode):
     if not vpn_mode:
         print(
             f'        {cl.MAGENTA}Щоб використовувати VPN або власний IP замість проксі - додайте прапорець `--vpn`{cl.RESET}\n')
-
-
-def putin_huilo():
-    print(f'                      {cl.MAGENTA}РУССКИЙ ВОЕННЫЙ КОРАБЛЬ, ИДИ НАХУЙ{cl.RESET}\n')
-    print(f'            заборонена атака з RU IP (окрім --vpn), а також .ua цілей\n')
-    exit()
