@@ -31,6 +31,7 @@ from .referers import REFERERS
 ctx: SSLContext = create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = CERT_NONE
+ctx.set_ciphers("DEFAULT")
 
 __version__: str = "2.4 SNAPSHOT"
 __ip__: Any = None
