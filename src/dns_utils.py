@@ -3,7 +3,6 @@ from functools import lru_cache
 
 import dns.exception
 import dns.resolver
-import requests
 from yarl import URL
 
 from .core import logger, cl
@@ -38,15 +37,3 @@ def get_resolvable_targets(targets, thread_pool):
             yield target
         except dns.exception.DNSException:
             logger.warning(f'{cl.RED}Ціль {target} не резолвиться і не буде атакована{cl.RESET}')
-
-@lru_cache(maxsize=1)
-def check_country():
-    providers = ['http://ip-api.com/json', 'https://ipwhois.app/json/', 'https://ipapi.co/json/', 'https://ipinfo.io/json']
-    for provider in providers:
-        try:
-            resp = requests.get(provider, timeout=0.5)
-            resp.raise_for_status()
-            return b'"RU"' in resp.content
-        except Exception:
-            continue
-    return False
