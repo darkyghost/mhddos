@@ -1,6 +1,6 @@
 from PyRoxy import ProxyUtiles
 from .core import logger, cl, PROXIES_URL
-from .system import read_or_fetch
+from .system import read_or_fetch, fetch
 
 
 # @formatter:off
@@ -43,7 +43,7 @@ def load_provided_proxies(proxies_file):
 
 
 def load_system_proxies():
-    raw = read_or_fetch(PROXIES_URL)
+    raw = fetch(PROXIES_URL)
     try:
         proxies = ProxyUtiles.parseAll(decrypt_proxies(raw))
     except Exception:
