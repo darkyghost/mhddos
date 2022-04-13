@@ -34,10 +34,11 @@ class Targets:
             logger.warning(f'{cl.MAGENTA}Не вдалося (пере)завантажити конфіг{cl.RESET}')
             return
 
-        self.config_targets = [
-            target.strip()
-            for target in config_content.split()
-            if target.strip()
-        ]
+        config_targets = []
+        for row in config_content.splitlines():
+            target = row.strip()
+            if target and not target.startswith('#'):
+                config_targets.append(target)
 
-        logger.info(f'{cl.YELLOW}Завантажено конфіг {self.config} на {cl.BLUE}{len(self.config_targets)} цілей{cl.RESET}')
+        logger.info(f'{cl.YELLOW}Завантажено конфіг {self.config} на {cl.BLUE}{len(config_targets)} цілей{cl.RESET}')
+        self.config_targets = config_targets
