@@ -308,6 +308,7 @@ class Layer4:
             self._proxies = list(proxies)
 
     def run(self) -> None:
+        if self._synevent: self._synevent.wait()
         self.select(self._method)
         while self._synevent.is_set():
             self.SENT_FLOOD()
@@ -595,6 +596,7 @@ class HttpFlood:
                          'Upgrade-Insecure-Requests: 1\r\n')
 
     def run(self) -> None:
+        if self._synevent: self._synevent.wait()
         self.select(self._method)
         while self._synevent.is_set():
             self.SENT_FLOOD()
