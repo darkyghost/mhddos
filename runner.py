@@ -96,6 +96,7 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
         kwargs = {
             **params._asdict(),
             'rpc': rpc,
+
             'thread_pool': thread_pool,
             'event': event,
             'statistics': thread_statistics,
