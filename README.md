@@ -64,8 +64,6 @@
 - [Приклад запуску через docker на OpenWRT](https://youtu.be/MlL6fuDcWlI)
 
 ### 🚨 Попередження щодо деяких методів атаки
-Метод **BYPASS** - це повільна версія методу GET, має сумнівну ефективність через відсутність помітної реалізації обходу захисту.
-
 Метод **CFB** - може обійти лише незначну частину захисту деяких сайтів, повна реалізація потребує вирішення CAPTCHA,
 а також доступу до платної версії бібліотеки яку не можливо буде включити до складу mhddos_proxy (через відкритий код).  
 Метод **DGB** - успішні запити залежать не від самої реалізації (вона не працює), а від "чистоти" IP-адреси.  
@@ -101,10 +99,8 @@
       --vpn                  Disable proxies to use VPN
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
       --proxies URL|path     URL or local path to file with proxies to use
-      --http-methods GET     List of HTTP(s) attack methods to use.
-                             (default is GET, POST, STRESS, BOT, PPS)
-                             Refer to MHDDoS docs for available options
-                             (https://github.com/MHProDev/MHDDoS)
+      --http-methods GET     List of HTTP(s) attack methods to use (default is GET + POST|STRESS).
+                             Refer to MHDDoS docs for available options (https://github.com/MHProDev/MHDDoS)
 
 ### Власні проксі
 
