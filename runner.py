@@ -130,7 +130,7 @@ def start(args):
     if args.table:
         args.debug = False
 
-    for bypass in ('CFB', 'DGB', 'BYPASS'):
+    for bypass in ('CFB', 'DGB'):
         if bypass in args.http_methods:
             logger.warning(
                 f'{cl.RED}Робота методу {bypass} не гарантована - атака методами '
