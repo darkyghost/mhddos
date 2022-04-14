@@ -1,39 +1,43 @@
-from concurrent.futures import as_completed
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
+from typing import List, Optional
 
 import dns.exception
 import dns.resolver
 from yarl import URL
 
 from .core import logger, cl
+from .targets import Target
 
 
 resolver = dns.resolver.Resolver(configure=False)
 resolver.nameservers = ['1.1.1.1', '1.0.0.1', '8.8.8.8', '8.8.4.4', '208.67.222.222', '208.67.220.220']
 
 
-@lru_cache(maxsize=128)
-def resolve_host(url):  # TODO: handle multiple IPs?
-    host = URL(url).host
+@lru_cache(maxsize=1024)
+def resolve_host(host: str) -> str:  # TODO: handle multiple IPs?
     if dns.inet.is_address(host):
         return host
     answer = resolver.resolve(host)
     return answer[0].to_text()
 
 
-def get_resolvable_targets(targets, thread_pool):
-    targets = list(set(targets))
-    if not targets:
-        return targets
+def resolve_url(url: str) -> str:
+    return resolve_host(URL(url).host)
 
-    future_to_target = {
-        thread_pool.submit(resolve_host, target): target
-        for target in targets
-    }
-    for future in as_completed(future_to_target):
-        target = future_to_target[future]
-        try:
-            future.result()
-            yield target
-        except dns.exception.DNSException:
-            logger.warning(f'{cl.RED}Ціль {target} не резолвиться і не буде атакована{cl.RESET}')
+
+def safe_resolve_host(host: str) -> Optional[str]:
+    try:
+        return resolve_host(host)
+    except dns.exception.DNSException:
+        logger.warning(f'{cl.RED}Ціль {host} не резолвиться і не буде атакована{cl.RESET}')
+        return None
+
+
+def resolve_all_targets(targets: List[Target], thread_pool: ThreadPoolExecutor) -> List[Target]:
+    unresolved_hosts = list(set(target.url.host for target in targets if not target.is_resolved))
+    ips = dict(zip(unresolved_hosts, thread_pool.map(safe_resolve_host, unresolved_hosts)))
+    for target in targets:
+        if not target.is_resolved:
+            target.addr = ips.get(target.url.host)
+    return targets

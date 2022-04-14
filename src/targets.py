@@ -1,19 +1,31 @@
 from .core import logger, cl
 from .system import read_or_fetch
 
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
+import urllib
 
-class Targets:
-    def __init__(self, targets, config):
-        self.targets = targets
-        self.config = config
-        self.config_targets = []
+from yarl import URL
 
-    def __iter__(self):
-        self.load_config()
-        for target in self.targets + self.config_targets:
-            yield self.prepare_target(target)
 
-    def prepare_target(self, target):
+@dataclass
+class Target:
+    url: URL
+    method: Optional[str] = None
+    params: Optional[List[Tuple[str, str]]] = None
+    addr: Optional[str] = None
+
+    @classmethod
+    def from_string(cls, raw: str) -> "Target":
+        parts = [part.strip() for part in raw.split(" ")]
+        n_parts = len(parts)
+        url = Target.prepare_url(parts[0])
+        method = parts[1] if n_parts > 1 else None
+        params = urllib.parse.parse_qsl(parts[2]) if n_parts > 2 else None
+        return cls(URL(url), method, params)
+
+    @staticmethod
+    def prepare_url(target: str) -> str:
         if '://' in target:
             return target
 
@@ -24,6 +36,26 @@ class Targets:
 
         scheme = 'https://' if port == '443' else 'http://'
         return scheme + target
+
+    @property
+    def is_resolved(self) -> bool:
+        return self.addr is not None
+
+    @property
+    def is_udp(self) -> bool:
+        return self.url.scheme == "udp"
+
+
+class Targets:
+    def __init__(self, targets, config):
+        self.targets = targets
+        self.config = config
+        self.config_targets = []
+
+    def __iter__(self):
+        self.load_config()
+        for target in self.targets + self.config_targets:
+            yield Target.from_string(target)
 
     def load_config(self):
         if not self.config:
