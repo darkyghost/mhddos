@@ -20,7 +20,7 @@ class Target:
         parts = [part.strip() for part in raw.split(" ")]
         n_parts = len(parts)
         url = Target.prepare_url(parts[0])
-        method = parts[1] if n_parts > 1 else None
+        method = parts[1].upper() if n_parts > 1 else None
         params = urllib.parse.parse_qsl(parts[2]) if n_parts > 2 else None
         return cls(URL(url), method, params)
 
