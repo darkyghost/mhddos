@@ -12,7 +12,7 @@ from yarl import URL
 class Target:
     url: URL
     method: Optional[str] = None
-    params: Dict[str, str] = field(default_factory=dict)
+    options: Dict[str, str] = field(default_factory=dict)
     addr: Optional[str] = None
 
     @classmethod
@@ -21,9 +21,9 @@ class Target:
         n_parts = len(parts)
         url = URL(Target.prepare_url(parts[0]))
         method = parts[1].upper() if n_parts > 1 else None
-        params = dict(tuple(part.split("=")) for part in parts[2:])
+        options = dict(tuple(part.split("=")) for part in parts[2:])
         addr = url.host if inet.is_address(url.host) else None
-        return cls(url, method, params, addr)
+        return cls(url, method, options, addr)
 
     @staticmethod
     def prepare_url(target: str) -> str:
@@ -45,6 +45,12 @@ class Target:
     @property
     def is_udp(self) -> bool:
         return self.url.scheme == "udp"
+
+    def option(self, key: str, default: Optional[str] = None) -> Optional[str]:
+        return self.options.get(key, default)
+
+    def __hash__(self):
+        return hash((self.url, self.method))
 
 
 class Targets:
