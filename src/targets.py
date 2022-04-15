@@ -1,9 +1,8 @@
 from .core import logger, cl
 from .system import read_or_fetch
 
-from dataclasses import dataclass
-from typing import List, Optional, Tuple
-import urllib
+from dataclasses import dataclass, field
+from typing import Dict, Optional
 
 from yarl import URL
 
@@ -12,7 +11,7 @@ from yarl import URL
 class Target:
     url: URL
     method: Optional[str] = None
-    params: Optional[List[Tuple[str, str]]] = None
+    params: Dict[str, str] = field(default_factory=dict)
     addr: Optional[str] = None
 
     @classmethod
@@ -21,7 +20,7 @@ class Target:
         n_parts = len(parts)
         url = Target.prepare_url(parts[0])
         method = parts[1].upper() if n_parts > 1 else None
-        params = urllib.parse.parse_qsl(parts[2]) if n_parts > 2 else None
+        params = dict(tuple(part.split("=")) for part in parts[2:])
         return cls(URL(url), method, params)
 
     @staticmethod
