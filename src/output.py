@@ -38,26 +38,25 @@ def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, perio
     tabulate_text = []
     total_pps = 0
     total_bps = 0
-    for k in statistics:
-        counters = statistics[k]
+    for params, counters in statistics.items():
         pps = int(counters['requests'].reset() / refresh_rate)
         total_pps += pps
         bps = int(8 * counters['bytes'].reset() / refresh_rate)
         total_bps += bps
         if table:
             tabulate_text.append((
-                f'{cl.YELLOW}%s' % k.url.host, k.url.port, k.method,
-                k.threads, Tools.humanformat(pps), f'{Tools.humanbits(bps)}{cl.RESET}'
+                f'{cl.YELLOW}%s' % params.target.url.host, params.target.url.port, params.method,
+                params.threads, Tools.humanformat(pps), f'{Tools.humanbits(bps)}{cl.RESET}'
             ))
         else:
             logger.info(
                 f'{cl.YELLOW}Ціль:{cl.BLUE} %s,{cl.YELLOW} Порт:{cl.BLUE} %s,{cl.YELLOW} Метод:{cl.BLUE} %s{cl.YELLOW}'
                 f' Потоків:{cl.BLUE} %s{cl.YELLOW} PPS:{cl.BLUE} %s,{cl.YELLOW} BPS:{cl.BLUE} %s{cl.RESET}' %
                 (
-                    k.url.host,
-                    k.url.port,
-                    k.method,
-                    k.threads,
+                    params.target.url.host,
+                    params.target.url.port,
+                    params.method,
+                    params.threads,
                     Tools.humanformat(pps),
                     Tools.humanbits(bps),
                 )
