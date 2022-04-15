@@ -626,7 +626,7 @@ class HttpFlood:
         sock.settimeout(SOCK_TIMEOUT)
         sock.connect(self._raw_target)
 
-        if self._target.scheme.lower() == "https":
+        if self._target.scheme.lower() == "https" or self._target.port == 443:
             sock = ctx.wrap_socket(sock,
                                    server_hostname=self._target.host,
                                    server_side=False,
