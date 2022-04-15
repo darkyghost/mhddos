@@ -4,6 +4,7 @@ from .system import read_or_fetch
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
+from dns import inet
 from yarl import URL
 
 
@@ -18,10 +19,11 @@ class Target:
     def from_string(cls, raw: str) -> "Target":
         parts = [part.strip() for part in raw.split(" ")]
         n_parts = len(parts)
-        url = Target.prepare_url(parts[0])
+        url = URL(Target.prepare_url(parts[0]))
         method = parts[1].upper() if n_parts > 1 else None
         params = dict(tuple(part.split("=")) for part in parts[2:])
-        return cls(URL(url), method, params)
+        addr = url.host if inet.is_address(url.host) else None
+        return cls(url, method, params, addr)
 
     @staticmethod
     def prepare_url(target: str) -> str:
