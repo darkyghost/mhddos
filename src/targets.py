@@ -1,19 +1,32 @@
 from .core import logger, cl
 from .system import read_or_fetch
 
-from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 from dns import inet
 from yarl import URL
 
 
-@dataclass
+Options = Dict[str, str]
+
+
 class Target:
     url: URL
-    method: Optional[str] = None
-    options: Dict[str, str] = field(default_factory=dict)
-    addr: Optional[str] = None
+    method: Optional[str]
+    options: Options
+    addr: Optional[str]
+
+    def __init__(
+        self,
+        url: URL,
+        method: Optional[str] = None,
+        options: Optional[Options] = None,
+        addr: Optional[str] = None
+    ):
+        self.url = url
+        self.method = method
+        self.options = options or {}
+        self.addr = addr
 
     @classmethod
     def from_string(cls, raw: str) -> "Target":
@@ -50,7 +63,7 @@ class Target:
         return self.options.get(key, default)
 
     def __hash__(self):
-        return hash((self.url, self.method))
+        return hash(id(self))
 
 
 class Targets:
