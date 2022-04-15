@@ -81,10 +81,12 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
         elif target.url.scheme == "tcp":
             params_list.append(Params(target, 'TCP', threads_per_target))
         # HTTP(S), methods from --http-methods
-        else:
+        elif target.url.scheme in {"http", "https"}:
             threads = threads_per_target // len(http_methods)
             for method in http_methods:
                 params_list.append(Params(target, method, threads))
+        else:
+            raise ValueError(f"Unsupported scheme given: {target.url.scheme}")
 
     logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
     statistics = {}
