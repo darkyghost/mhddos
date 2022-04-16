@@ -1,19 +1,45 @@
 from .core import logger, cl
 from .system import read_or_fetch
 
+from typing import Dict, Optional
 
-class Targets:
-    def __init__(self, targets, config):
-        self.targets = targets
-        self.config = config
-        self.config_targets = []
+from dns import inet
+from yarl import URL
 
-    def __iter__(self):
-        self.load_config()
-        for target in self.targets + self.config_targets:
-            yield self.prepare_target(target)
 
-    def prepare_target(self, target):
+Options = Dict[str, str]
+
+
+class Target:
+    url: URL
+    method: Optional[str]
+    options: Options
+    addr: Optional[str]
+
+    def __init__(
+        self,
+        url: URL,
+        method: Optional[str] = None,
+        options: Optional[Options] = None,
+        addr: Optional[str] = None
+    ):
+        self.url = url
+        self.method = method
+        self.options = options or {}
+        self.addr = addr
+
+    @classmethod
+    def from_string(cls, raw: str) -> "Target":
+        parts = [part.strip() for part in raw.split(" ")]
+        n_parts = len(parts)
+        url = URL(Target.prepare_url(parts[0]))
+        method = parts[1].upper() if n_parts > 1 else None
+        options = dict(tuple(part.split("=")) for part in parts[2:])
+        addr = url.host if inet.is_address(url.host) else None
+        return cls(url, method, options, addr)
+
+    @staticmethod
+    def prepare_url(target: str) -> str:
         if '://' in target:
             return target
 
@@ -24,6 +50,32 @@ class Targets:
 
         scheme = 'https://' if port == '443' else 'http://'
         return scheme + target
+
+    @property
+    def is_resolved(self) -> bool:
+        return self.addr is not None
+
+    @property
+    def is_udp(self) -> bool:
+        return self.url.scheme == "udp"
+
+    def option(self, key: str, default: Optional[str] = None) -> Optional[str]:
+        return self.options.get(key, default)
+
+    def __hash__(self):
+        return hash(id(self))
+
+
+class Targets:
+    def __init__(self, targets, config):
+        self.targets = targets
+        self.config = config
+        self.config_targets = []
+
+    def __iter__(self):
+        self.load_config()
+        for target in self.targets + self.config_targets:
+            yield Target.from_string(target)
 
     def load_config(self):
         if not self.config:
