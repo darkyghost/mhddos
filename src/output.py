@@ -41,6 +41,8 @@ def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, perio
     for params, counters in statistics.items():
         pps = int(counters['requests'].reset() / refresh_rate)
         total_pps += pps
+        # XXX: to be precise here, we need to track time spent
+        # by threads on each specific target
         bps = int(8 * counters['bytes'].reset() / refresh_rate)
         total_bps += bps
         if table:
