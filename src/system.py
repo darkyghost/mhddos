@@ -4,6 +4,8 @@ from contextlib import suppress
 
 import requests
 
+from src.core import VERSION_URL
+
 
 def fix_ulimits():
     try:
@@ -34,3 +36,9 @@ def fetch(url):
             if attempt != attempts - 1:
                 time.sleep(attempt + 1)
     return None
+
+
+def is_latest_version():
+    latest = read_or_fetch(VERSION_URL).strip()
+    current = read_or_fetch('version.txt').strip()
+    return current == latest

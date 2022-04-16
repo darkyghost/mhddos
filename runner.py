@@ -16,7 +16,7 @@ from src.dns_utils import resolve_host, get_resolvable_targets
 from src.mhddos import main as mhddos_main
 from src.output import AtomicCounter, show_statistic, print_banner, print_progress
 from src.proxies import update_proxies
-from src.system import fix_ulimits
+from src.system import fix_ulimits, is_latest_version
 from src.targets import Targets
 
 
@@ -145,7 +145,11 @@ def start(args):
         targets_iter = Targets(args.targets, args.config)
 
     proxies = []
+    is_old_version = not is_latest_version()
     while True:
+        if is_old_version:
+            print(f'{cl.RED}! ЗАПУЩЕНА НЕ ОСТАННЯ ВЕРСІЯ - ОНОВІТЬСЯ{cl.RESET}\n')
+
         while True:
             raw_targets = list(targets_iter)
             if not raw_targets:
