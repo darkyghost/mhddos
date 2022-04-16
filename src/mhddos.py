@@ -326,7 +326,6 @@ class Layer4:
 
     def run(self) -> None:
         self.select(self._method)
-        # while self._event.is_set():
         self.SENT_FLOOD()
 
     def open_connection(self,
@@ -613,7 +612,6 @@ class HttpFlood:
 
     def run(self) -> None:
         self.select(self._method)
-        # while self._event.is_set():
         self.SENT_FLOOD()
 
     @property
