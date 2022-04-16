@@ -39,6 +39,6 @@ def fetch(url):
 
 
 def is_latest_version():
-    latest = read_or_fetch(VERSION_URL).strip()
-    current = read_or_fetch('version.txt').strip()
-    return current == latest
+    latest = int(read_or_fetch(VERSION_URL).strip())
+    current = int(read_or_fetch('version.txt').strip())
+    return current >= latest

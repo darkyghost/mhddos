@@ -8,11 +8,9 @@ from concurrent.futures.thread import _WorkItem
 from threading import Thread, Event
 from time import sleep, time
 
-from yarl import URL
-
 from src.cli import init_argparse
 from src.core import logger, cl, UDP_THREADS, LOW_RPC, IT_ARMY_CONFIG_URL
-from src.dns_utils import resolve_host, resolve_all_targets
+from src.dns_utils import resolve_all_targets
 from src.mhddos import main as mhddos_main
 from src.output import AtomicCounter, show_statistic, print_banner, print_progress
 from src.proxies import update_proxies
