@@ -26,8 +26,10 @@ from yarl import URL
 from PyRoxy import Proxy, ProxyType, Tools as ProxyTools
 from .ImpactPacket import IP, TCP, UDP, Data
 from .core import cl, logger, ROOT_DIR
-from .referers import REFERERS
 
+from .referers import REFERERS
+REFERERS = set(a.strip() for a in REFERERS)
+from .useragents import USERAGENTS
 
 ctx: SSLContext = create_default_context()
 ctx.check_hostname = False
@@ -1048,7 +1050,6 @@ def main(url, ip, method, event, proxies, rpc=None, refl_li_fn=None, statistics=
     # XXX: not sure how this should work now
     # threads = Tools.prepare(url.host, threads, thread_pool, REQUESTS_SENT, BYTES_SEND)
     if method in Methods.LAYER7_METHODS:
-        useragent_li = ROOT_DIR / "files/useragent.txt"
         bombardier_path = Path.home() / "go/bin/bombardier"
 
         if method == "BOMB":
@@ -1060,21 +1061,13 @@ def main(url, ip, method, event, proxies, rpc=None, refl_li_fn=None, statistics=
                 "https://github.com/MHProDev/MHDDoS/wiki/BOMB-method"
             )
 
-        if not useragent_li.exists():
-            exit("The Useragent file doesn't exist ")
-
-        # XXX: No need to do thif from each thread separately
-        with useragent_li.open("r+") as f:
-            uagents = set(a.strip() for a in f.readlines())
-        referers = set(a.strip() for a in REFERERS)
-
-        if not uagents:
+        if not USERAGENTS:
             exit("Empty Useragent File ")
-        if not referers:
+        if not REFERERS:
             exit("Empty Referer File ")
 
         return HttpFlood(-1, url, ip, method, rpc, event,
-                         uagents, referers, proxies, REQUESTS_SENT, BYTES_SEND)
+                         USERAGENTS, REFERERS, proxies, REQUESTS_SENT, BYTES_SEND)
     
     if method in Methods.LAYER4_METHODS:
         port = url.port
