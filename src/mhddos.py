@@ -1081,6 +1081,8 @@ def main(url, ip, method, event, proxies, rpc=None, refl_li_fn=None, statistics=
 
         ref = None
         if method in {"NTP", "DNS", "RDP", "CHAR", "MEM", "CLDAP", "ARD"}:
+            # XXX: rework this code when amplifier attack is planned
+            # (not used as of now)
             refl_li = ROOT_DIR / "files" / refl_li_fn
             if not refl_li.exists():
                 exit("The reflector file doesn't exist")
