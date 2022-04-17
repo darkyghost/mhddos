@@ -46,30 +46,29 @@ def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, perio
         if table:
             tabulate_text.append((
                 f'{cl.YELLOW}%s' % params.target.url.host, params.target.url.port, params.method,
-                params.threads, Tools.humanformat(pps), f'{Tools.humanbits(bps)}{cl.RESET}'
+                Tools.humanformat(pps), f'{Tools.humanbits(bps)}{cl.RESET}'
             ))
         else:
             logger.info(
-                f'{cl.YELLOW}Ціль:{cl.BLUE} %s,{cl.YELLOW} Порт:{cl.BLUE} %s,{cl.YELLOW} Метод:{cl.BLUE} %s{cl.YELLOW}'
-                f' Потоків:{cl.BLUE} %s{cl.YELLOW} PPS:{cl.BLUE} %s,{cl.YELLOW} BPS:{cl.BLUE} %s{cl.RESET}' %
+                f'{cl.YELLOW}Ціль:{cl.BLUE} %s,{cl.YELLOW} Порт:{cl.BLUE} %s,{cl.YELLOW} Метод:{cl.BLUE} %s'
+                f' {cl.YELLOW} PPS:{cl.BLUE} %s,{cl.YELLOW} BPS:{cl.BLUE} %s{cl.RESET}' %
                 (
                     params.target.url.host,
                     params.target.url.port,
                     params.method,
-                    params.threads,
                     Tools.humanformat(pps),
                     Tools.humanbits(bps),
                 )
             )
 
     if table:
-        tabulate_text.append((f'{cl.GREEN}Усього', '', '', '', Tools.humanformat(total_pps),
+        tabulate_text.append((f'{cl.GREEN}Усього', '', '', Tools.humanformat(total_pps),
                               f'{Tools.humanbits(total_bps)}{cl.RESET}'))
 
         cls()
         print(tabulate(
             tabulate_text,
-            headers=[f'{cl.BLUE}Ціль', 'Порт', 'Метод', 'Потоки', 'Запити/c', f'Трафік/c{cl.RESET}'],
+            headers=[f'{cl.BLUE}Ціль', 'Порт', 'Метод', 'Запити/c', f'Трафік/c{cl.RESET}'],
             tablefmt='fancy_grid'
         ))
         print_banner(vpn_mode)
