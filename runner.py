@@ -20,8 +20,7 @@ from src.system import fix_ulimits, is_latest_version
 from src.targets import Targets
 
 
-# XXX: no need to keep threads (just fix log message)
-Params = namedtuple('Params', 'target, method, threads')
+Params = namedtuple('Params', 'target, method')
 
 PAD_THREADS = 30
 
@@ -107,7 +106,6 @@ def run_ddos(
     table,
     udp_threads,
 ):
-    threads_per_target = total_threads // len(targets)
     statistics, event, kwargs_list, udp_kwargs_list = {}, Event(), [], []
 
 
@@ -125,28 +123,26 @@ def run_ddos(
         }
         container.append(kwargs)
         if not table:
-            # XXX: this message is not accurate now
             logger.info(
-                f"{cl.YELLOW}Атакуємо{cl.BLUE} %s{cl.YELLOW} методом{cl.BLUE} %s{cl.YELLOW}, потоків:{cl.BLUE} %d{cl.YELLOW}!{cl.RESET}"
-                % (params.target.url.host, params.method, params.threads))
+                f"{cl.YELLOW}Атакуємо{cl.BLUE} %s{cl.YELLOW} методом{cl.BLUE} %s{cl.YELLOW}!{cl.RESET}"
+                % (params.target.url.host, params.method))
 
 
     for target in targets:
         assert target.is_resolved, "Unresolved target cannot be used for attack"
         # udp://, method defaults to "UDP"
         if target.is_udp:
-            register_params(Params(target, target.method or 'UDP', udp_threads), udp_kwargs_list)
+            register_params(Params(target, target.method or 'UDP'), udp_kwargs_list)
         # Method is given explicitly
         elif target.method is not None:
-            register_params(Params(target, target.method, threads_per_target), kwargs_list)
+            register_params(Params(target, target.method), kwargs_list)
         # tcp://
         elif target.url.scheme == "tcp":
-            register_params(Params(target, 'TCP', threads_per_target, kwargs_list))
+            register_params(Params(target, 'TCP'), kwargs_list)
         # HTTP(S), methods from --http-methods
         elif target.url.scheme in {"http", "https"}:
-            threads = threads_per_target // len(http_methods)
             for method in http_methods:
-                register_params(Params(target, method, threads), kwargs_list)
+                register_params(Params(target, method), kwargs_list)
         else:
             raise ValueError(f"Unsupported scheme given: {target.url.scheme}")
 
