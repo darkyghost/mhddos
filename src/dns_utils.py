@@ -1,4 +1,4 @@
-from concurrent.futures import Executor
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from typing import List, Optional
 
@@ -34,9 +34,10 @@ def safe_resolve_host(host: str) -> Optional[str]:
         return None
 
 
-def resolve_all_targets(targets: List[Target], thread_pool: Executor) -> List[Target]:
+def resolve_all_targets(targets: List[Target], max_workers:int=32) -> List[Target]:
     unresolved_hosts = list(set(target.url.host for target in targets if not target.is_resolved))
-    ips = dict(zip(unresolved_hosts, thread_pool.map(safe_resolve_host, unresolved_hosts)))
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        ips = dict(zip(unresolved_hosts, pool.map(safe_resolve_host, unresolved_hosts)))
     for target in targets:
         if not target.is_resolved:
             target.addr = ips.get(target.url.host)

