@@ -27,7 +27,6 @@ PAD_THREADS = 30
 
 TERMINATE = object()
 
-# XXX: do we need custom pool in case threads are only launched once?
 class DaemonThreadPool(Executor):
     def __init__(self):
         self._queue = queue.SimpleQueue()
