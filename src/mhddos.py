@@ -754,9 +754,9 @@ class HttpFlood:
         s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                packets += 1
                 if not self._event.is_set(): return 0
                 Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                packets += 1
         Tools.safe_close(s)
         return packets
 
