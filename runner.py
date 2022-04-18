@@ -79,8 +79,12 @@ class Flooder(Thread):
         self._event.wait()
         while self._event.is_set():
             runnable = next(self._runnables_iter)
-            with suppress(Exception):
-                runnable.run()
+            alive = True
+            while alive:
+                try:
+                    alive = runnable.run() > 0
+                except Exception as exc:
+                    alive = False
 
 
 def run_ddos(
