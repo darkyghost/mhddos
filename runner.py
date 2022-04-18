@@ -12,7 +12,7 @@ from threading import Event, Thread, get_ident
 from time import sleep, time
 
 from src.cli import init_argparse
-from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL
+from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED
 from src.dns_utils import resolve_all_targets
 from src.mhddos import main as mhddos_main
 from src.output import AtomicCounter, show_statistic, print_banner, print_progress
@@ -68,7 +68,7 @@ class DaemonThreadPool(Executor):
 
 class Flooder(Thread):
 
-    def __init__(self, event, args_list, work_steal_cycles: int = 100):
+    def __init__(self, event, args_list, work_steal_cycles: int = WORK_STEALING_DISABLED):
         super(Flooder, self).__init__(daemon=True)
         self._event = event
         self._work_steal_cycles = work_steal_cycles
@@ -93,9 +93,13 @@ class Flooder(Thread):
             # one should be careful with the configuration. If each cycle takes too
             # long (for example BYPASS or DBG attacks are used), the number should
             # be set to be relatively small.
+            #
+            # To dealing stealing, set number of cycles to -1. Such scheduling will
+            # be equivalent to the scheduling that was used before the feature was
+            # introduced (static assignment).
             runnable = next(self._runnables_iter)
             alive, cycles = True, self._work_steal_cycles
-            while alive and cycles > 0:
+            while self._work_steal_cycles == WORK_STEALING_DISABLED or (alive and cycles > 0):
                 try:
                     alive = runnable.run() > 0
                 except Exception as exc:
@@ -114,6 +118,7 @@ def run_ddos(
     debug,
     table,
     udp_threads,
+    work_stealing_cycles,
 ):
     statistics, event, kwargs_list, udp_kwargs_list = {}, Event(), [], []
 
@@ -159,12 +164,12 @@ def run_ddos(
 
     threads = []
     for _ in range(total_threads):
-        flooder = Flooder(event, kwargs_list)
+        flooder = Flooder(event, kwargs_list, work_stealing_cycles)
         flooder.start()
         threads.append(flooder)
     if udp_kwargs_list:
         for _ in range(udp_threads):
-            flooder = Flooder(event, udp_kwargs_list)
+            flooder = Flooder(event, udp_kwargs_list, work_stealing_cycles)
             flooder.start()
             threads.append(flooder)
 
@@ -252,6 +257,7 @@ def start(args):
             args.debug,
             args.table,
             args.udp_threads,
+            args.work_stealing_cycles,
         )
 
 

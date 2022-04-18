@@ -2,7 +2,7 @@ import argparse
 import random
 from multiprocessing import cpu_count
 
-from .core import THREADS_PER_CORE, MAX_DEFAULT_THREADS, UDP_THREADS
+from .core import THREADS_PER_CORE, MAX_DEFAULT_THREADS, UDP_THREADS, WORK_STEALING_DISABLED
 from .mhddos import Methods
 
 
@@ -72,6 +72,12 @@ def init_argparse() -> argparse.ArgumentParser:
         '--itarmy',
         action='store_true',
         default=False,
+    )
+    parser.add_argument(
+        '--work-stealing-cycles',
+        type=int,
+        default=100,
+        help=f'Advanced setting. Defines how often targets assignment between threads is reconsidered. Set to {WORK_STEALING_DISABLED} to disable work stealing (old scheduling mode)',
     )
 
     parser.add_argument('-p', '--period', type=int, help='DEPRECATED')
