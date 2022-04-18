@@ -30,7 +30,6 @@ TERMINATE = object()
 class DaemonThreadPool(Executor):
     def __init__(self):
         self._queue = queue.SimpleQueue()
-
     def start(self, num_threads):
         threads_started = num_threads
         for cnt in range(num_threads):
@@ -77,34 +76,39 @@ class Flooder(Thread):
         self._runnables_iter = cycle(runnables)
 
     def run(self):
+        """
+        The logic here is the following:
+
+         1) pick up random target to attack
+         2) run a single session, receive back number of packets being sent
+         3) if session was "succesfull" (non zero packets), keep executing for
+            {work_steal_cycles} number of cycles
+         4) otherwise, go back to 1)
+
+        The idea is that if a specific target doesn't work, the thread will
+        pick another work to do (steal). The definition of "success" could be
+        extended to cover more use cases.
+
+        As an attempt to steal work happens after fixed number of cycles,
+        one should be careful with the configuration. If each cycle takes too
+        long (for example BYPASS or DBG attacks are used), the number should
+        be set to be relatively small.
+
+        To dealing stealing, set number of cycles to -1. Such scheduling will
+        be equivalent to the scheduling that was used before the feature was
+        introduced (static assignment).
+        """
         self._event.wait()
         while self._event.is_set():
-            # The logic here is the following:
-            # 1) pick up random target to attack
-            # 2) run a single session, receive back number of packets being sent
-            # 3) if session was "succesfull" (non zero packets), keep executing for
-            #    {work_steal_cycles} number of cycles
-            # 4) otherwise, go back to 1)
-            # The idea is that if a specific target doesn't work,
-            # the thread will pick another work to do (steal).
-            # The definition of "success" could be extended to cover more use cases.
-            #
-            # As an attempt to steal work happens after fixed number of cycles,
-            # one should be careful with the configuration. If each cycle takes too
-            # long (for example BYPASS or DBG attacks are used), the number should
-            # be set to be relatively small.
-            #
-            # To dealing stealing, set number of cycles to -1. Such scheduling will
-            # be equivalent to the scheduling that was used before the feature was
-            # introduced (static assignment).
             runnable = next(self._runnables_iter)
-            alive, cycles = True, self._work_steal_cycles
-            while self._work_steal_cycles == WORK_STEALING_DISABLED or (alive and cycles > 0):
+            alive, cycles_left = True, self._work_steal_cycles
+            no_steal = self._work_steal_cycles == WORK_STEALING_DISABLED
+            while self._event.is_set() and (no_steal or alive):
                 try:
-                    alive = runnable.run() > 0
-                except Exception as exc:
+                    alive = runnable.run() > 0 and cycles_left > 0
+                except Exception:
                     alive = False
-                cycles -= 1
+                cycles_left -= 1
 
 
 def run_ddos(
