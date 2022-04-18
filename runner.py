@@ -71,15 +71,14 @@ class Flooder(Thread):
     def __init__(self, event, args_list):
         super(Flooder, self).__init__(daemon=True)
         self._event = event
-        args_list = args_list[:]
-        random.shuffle(args_list)
-        self._args_iter = cycle(args_list)
+        runnables = [mhddos_main(**kwargs) for kwargs in args_list]
+        random.shuffle(runnables)
+        self._runnables_iter = cycle(runnables)
 
     def run(self):
         self._event.wait()
         while self._event.is_set():
-            kwargs = next(self._args_iter)
-            runnable = mhddos_main(**kwargs)
+            runnable = next(self._runnables_iter)
             with suppress(Exception):
                 runnable.run()
 

@@ -325,9 +325,9 @@ class Layer4:
         self.BYTES_SEND = BYTES_SEND
         if proxies:
             self._proxies = list(proxies)
+        self.select(self._method)
 
     def run(self) -> None:
-        self.select(self._method)
         self.SENT_FLOOD()
 
     def open_connection(self,
@@ -611,9 +611,9 @@ class HttpFlood:
                          'Sec-Gpc: 1\r\n'
                          'Pragma: no-cache\r\n'
                          'Upgrade-Insecure-Requests: 1\r\n')
+        self.select(self._method)
 
     def run(self) -> None:
-        self.select(self._method)
         self.SENT_FLOOD()
 
     @property
