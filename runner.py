@@ -88,15 +88,19 @@ class Flooder(Thread):
             # The definition of "success" could be extended to cover more use cases.
             #
             # XXX: we have to make sure temporarly dead target won't be
-            # excluded from the scheduling forever. Like, this requires are to
-            # have shared iterator (back where we started).
+            # excluded from the scheduling forever. As it might be the case all other
+            # targets are going to just work forever. Like, this requires are to
+            # have shared iterator (back where we started). Experimenting with just
+            # using max number of cycles (though ideally this should depend on execution
+            # time not on the number of calls).
             runnable = next(self._runnables_iter)
-            alive = True
-            while alive:
+            alive, cycles = True, 100
+            while alive and cycles > 0:
                 try:
                     alive = runnable.run() > 0
                 except Exception as exc:
                     alive = False
+                cycles -= 1
 
 
 def run_ddos(
