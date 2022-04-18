@@ -78,6 +78,18 @@ class Flooder(Thread):
     def run(self):
         self._event.wait()
         while self._event.is_set():
+            # The logic here is the following:
+            # 1) pick up random target to attack
+            # 2) run a single session, receive back number of packets being sent
+            # 3) if session was "succesfull" (non zero packets), keep executing
+            # 4) otherwise, go back to 1)
+            # The idea is that if a specific target doesn't work,
+            # the thread will pick another work to do (steal).
+            # The definition of "success" could be extended to cover more use cases.
+            #
+            # XXX: we have to make sure temporarly dead target won't be
+            # excluded from the scheduling forever. Like, this requires are to
+            # have shared iterator (back where we started).
             runnable = next(self._runnables_iter)
             alive = True
             while alive:
