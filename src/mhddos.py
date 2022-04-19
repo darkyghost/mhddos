@@ -44,24 +44,6 @@ __ip__: Any = None
 SOCK_TIMEOUT = 8
 
 
-class AtomicCounter:
-    def __init__(self, initial=0):
-        self.value = initial
-        self._lock = Lock()
-
-    def __iadd__(self, value):
-        self.increment(value)
-        return self
-
-    def __int__(self):
-        return self.value
-
-    def increment(self, num=1):
-        with self._lock:
-            self.value += num
-            return self.value
-
-
 def getMyIPAddress():
     global __ip__
     if __ip__:
