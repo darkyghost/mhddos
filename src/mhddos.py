@@ -592,7 +592,7 @@ class HttpFlood:
                          'Upgrade-Insecure-Requests: 1\r\n')
         self.select(self._method)
 
-    def run(self) -> None:
+    def run(self) -> Optional[int]:
         return self.SENT_FLOOD()
 
     @property
