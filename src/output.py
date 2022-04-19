@@ -46,12 +46,12 @@ def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, perio
         if table:
             tabulate_text.append((
                 f'{cl.YELLOW}%s' % params.target.url.host, params.target.url.port, params.method,
-                params.threads, Tools.humanformat(pps), f'{Tools.humanbits(bps)}{cl.RESET}'
+                params.threads, f'{Tools.humanformat(pps)}/s', f'{Tools.humanbits(bps)}/s{cl.RESET}'
             ))
         else:
             logger.info(
-                f'{cl.YELLOW}Ціль:{cl.BLUE} %s,{cl.YELLOW} Порт:{cl.BLUE} %s,{cl.YELLOW} Метод:{cl.BLUE} %s{cl.YELLOW}'
-                f' Потоків:{cl.BLUE} %s{cl.YELLOW} PPS:{cl.BLUE} %s,{cl.YELLOW} BPS:{cl.BLUE} %s{cl.RESET}' %
+                f'{cl.YELLOW}Ціль:{cl.BLUE} %s{cl.YELLOW}, Порт:{cl.BLUE} %s{cl.YELLOW}, Метод:{cl.BLUE} %s{cl.YELLOW},'
+                f' Потоки:{cl.BLUE} %s{cl.YELLOW}, Запити:{cl.BLUE} %s/s{cl.YELLOW}, Трафік:{cl.BLUE} %s/s{cl.RESET}' %
                 (
                     params.target.url.host,
                     params.target.url.port,
@@ -63,19 +63,19 @@ def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, perio
             )
 
     if table:
-        tabulate_text.append((f'{cl.GREEN}Усього', '', '', '', Tools.humanformat(total_pps),
-                              f'{Tools.humanbits(total_bps)}{cl.RESET}'))
+        tabulate_text.append((f'{cl.GREEN}Усього', '', '', '', f'{Tools.humanformat(total_pps)}/s',
+                              f'{Tools.humanbits(total_bps)}/s{cl.RESET}'))
 
         cls()
         print(tabulate(
             tabulate_text,
-            headers=[f'{cl.BLUE}Ціль', 'Порт', 'Метод', 'Потоки', 'Запити/c', f'Трафік/c{cl.RESET}'],
+            headers=[f'{cl.BLUE}Ціль', 'Порт', 'Метод', 'Потоки', 'Запити', f'Трафік{cl.RESET}'],
             tablefmt='fancy_grid'
         ))
         print_banner(vpn_mode)
     else:
         logger.info(
-            f'{cl.GREEN}Усього{cl.YELLOW} PPS:{cl.BLUE} %s,{cl.YELLOW} BPS:{cl.BLUE} %s{cl.RESET}' %
+            f'{cl.GREEN}Усього:{cl.YELLOW} Запити:{cl.GREEN} %s/s,{cl.YELLOW} Трафік:{cl.GREEN} %s/s{cl.RESET}' %
             (
                 Tools.humanformat(total_pps),
                 Tools.humanbits(total_bps),
