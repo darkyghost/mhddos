@@ -1,6 +1,4 @@
-from itertools import count
 import os
-from threading import Lock
 
 from tabulate import tabulate
 
@@ -11,52 +9,6 @@ from .mhddos import Tools
 def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-
-class AtomicCounter:
-    def __init__(self, initial=0):
-        self.value = initial
-        self._lock = Lock()
-
-    def __iadd__(self, value):
-        self.increment(value)
-        return self
-
-    def __int__(self):
-        return self.value
-
-    def increment(self, num=1):
-        with self._lock:
-            self.value += num
-
-    def reset(self, value=0):
-        with self._lock:
-            old = self.value
-            self.value = value
-        return old
-
-
-class LockFreeAtomicCounter:
-
-    def __init__(self, initial=0):
-        self._increments = count()
-        self._value = initial
-        self._lock = Lock()
-
-    def __iadd__(self, value):
-        self.increment(value)
-        return self
-
-    def increment(self, value=1):
-        for _ in range(value):
-            next(self._increments)
-
-    def reset(self, value=0):
-        with self._lock:
-            old = self._value
-            next_inc = next(self._increments)
-            self._value = value
-            self._increments = count()
-        return old+next_inc-1
 
 
 def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, period, passed):

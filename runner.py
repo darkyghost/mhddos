@@ -9,11 +9,11 @@ from threading import Event, Thread
 from time import sleep, time
 
 from src.cli import init_argparse
-from src.concurrency import DaemonThreadPool
+from src.concurrency import AtomicCounter, DaemonThreadPool
 from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED, DNS_WORKERS
 from src.dns_utils import resolve_all_targets
 from src.mhddos import main as mhddos_main
-from src.output import AtomicCounter, show_statistic, print_banner, print_progress
+from src.output import show_statistic, print_banner, print_progress
 from src.proxies import update_proxies
 from src.system import fix_ulimits, is_latest_version
 from src.targets import Targets

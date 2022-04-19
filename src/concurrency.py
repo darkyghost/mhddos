@@ -1,7 +1,7 @@
 from concurrent.futures import Future, Executor
 from concurrent.futures.thread import _WorkItem
 import queue
-from threading import Thread
+from threading import Lock, Thread
 
 from src.core import logger
 
@@ -37,4 +37,28 @@ class DaemonThreadPool(Executor):
             if work_item is not None:
                 work_item.run()
                 del work_item
+
+
+class AtomicCounter:
+
+    def __init__(self, initial=0):
+        self.value = initial
+        self._lock = Lock()
+
+    def __iadd__(self, value):
+        self.increment(value)
+        return self
+
+    def __int__(self):
+        return self.value
+
+    def increment(self, num=1):
+        with self._lock:
+            self.value += num
+
+    def reset(self, value=0):
+        with self._lock:
+            old = self.value
+            self.value = value
+        return old
 
