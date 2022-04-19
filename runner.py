@@ -11,11 +11,11 @@ from time import sleep, time
 from typing import List
 
 from src.cli import init_argparse
-from src.concurrency import AtomicCounter, DaemonThreadPool
+from src.concurrency import DaemonThreadPool
 from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED, DNS_WORKERS
 from src.dns_utils import resolve_all_targets
 from src.mhddos import main as mhddos_main
-from src.output import show_statistic, print_banner, print_progress
+from src.output import Stats, show_statistic, print_banner, print_progress
 from src.proxies import update_proxies
 from src.system import fix_ulimits, is_latest_version
 from src.targets import Targets
@@ -115,7 +115,7 @@ def run_ddos(
 
 
     def register_params(params, container):
-        thread_statistics = {'requests': AtomicCounter(), 'bytes': AtomicCounter()}
+        thread_statistics = Stats()
         statistics[params] = thread_statistics
         kwargs = {
             'url': params.target.url,
@@ -123,7 +123,7 @@ def run_ddos(
             'method': params.method,
             'rpc': int(params.target.option("rpc", "0")) or rpc,
             'event': event,
-            'statistics': thread_statistics,
+            'stats': thread_statistics,
             'proxies': proxies,
         }
         container.append(kwargs)
