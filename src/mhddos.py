@@ -127,7 +127,7 @@ class Tools:
             value = i / pow(base, multiple)
             return f'{value:.2f} {MULTIPLES[multiple]}'
         else:
-            return '0'
+            return '0 Bit'
 
     @staticmethod
     def humanformat(num: int, precision: int = 2):

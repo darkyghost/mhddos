@@ -107,7 +107,7 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
         mhddos_main(**kwargs)
         if not table:
             logger.info(
-                f"{cl.YELLOW}Атакуємо{cl.BLUE} %s{cl.YELLOW} методом{cl.BLUE} %s{cl.YELLOW}, потоків:{cl.BLUE} %d{cl.YELLOW}!{cl.RESET}"
+                f"{cl.YELLOW}Атакуємо{cl.BLUE} %s{cl.YELLOW} методом{cl.BLUE} %s{cl.YELLOW}, потоків:{cl.BLUE} %d{cl.YELLOW}{cl.RESET}"
                 % (params.target.url.host, params.method, params.threads))
 
     if not (table or debug):
