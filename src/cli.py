@@ -74,10 +74,15 @@ def init_argparse() -> argparse.ArgumentParser:
         default=False,
     )
     parser.add_argument(
-        '--work-stealing-cycles',
+        '--switch-after',
         type=int,
         default=100,
-        help=f'Advanced setting. Defines how often targets assignment between threads is reconsidered. Set to {WORK_STEALING_DISABLED} to disable work stealing (old scheduling mode)',
+        help=(
+            "Advanced setting. Make sure to test performance when setting non-default value. "
+            "Defines how many cycles each threads executes over specific target before "
+            "switching to another one. "
+            f"Set to {WORK_STEALING_DISABLED} to disable switching (old mode)"
+        ),
     )
 
     parser.add_argument('-p', '--period', type=int, help='DEPRECATED')
