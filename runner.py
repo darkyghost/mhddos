@@ -67,10 +67,10 @@ class DaemonThreadPool(Executor):
 
 class Flooder(Thread):
 
-    def __init__(self, event, args_list, work_steal_cycles: int = WORK_STEALING_DISABLED):
+    def __init__(self, event, args_list, switch_after: int = WORK_STEALING_DISABLED):
         super(Flooder, self).__init__(daemon=True)
         self._event = event
-        self._work_steal_cycles = work_steal_cycles
+        self._switch_after = switch_after
         runnables = [mhddos_main(**kwargs) for kwargs in args_list]
         random.shuffle(runnables)
         self._runnables_iter = cycle(runnables)
@@ -82,7 +82,7 @@ class Flooder(Thread):
          1) pick up random target to attack
          2) run a single session, receive back number of packets being sent
          3) if session was "succesfull" (non zero packets), keep executing for
-            {work_steal_cycles} number of cycles
+            {switch_after} number of cycles
          4) otherwise, go back to 1)
 
         The idea is that if a specific target doesn't work, the thread will
@@ -101,9 +101,9 @@ class Flooder(Thread):
         self._event.wait()
         while self._event.is_set():
             runnable = next(self._runnables_iter)
-            alive, cycles_left = True, self._work_steal_cycles
-            no_steal = self._work_steal_cycles == WORK_STEALING_DISABLED
-            while self._event.is_set() and (no_steal or alive):
+            no_switch = self._switch_after == WORK_STEALING_DISABLED
+            alive, cycles_left = True, self._switch_after
+            while self._event.is_set() and (no_switch or alive):
                 try:
                     alive = runnable.run() > 0 and cycles_left > 0
                 except Exception:
@@ -261,7 +261,7 @@ def start(args):
             args.debug,
             args.table,
             args.udp_threads,
-            args.work_stealing_cycles,
+            args.switch_after,
         )
 
 
