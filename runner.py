@@ -1,18 +1,16 @@
 # @formatter:off
 import colorama; colorama.init()
 # @formatter:on
-import queue
 from collections import namedtuple
-from concurrent.futures import Future, Executor, ThreadPoolExecutor
-from concurrent.futures.thread import _WorkItem
 from contextlib import suppress
 from itertools import cycle
 import random
-from threading import Event, Thread, get_ident
+from threading import Event, Thread
 from time import sleep, time
 
 from src.cli import init_argparse
-from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED
+from src.concurrency import DaemonThreadPool
+from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED, DNS_WORKERS
 from src.dns_utils import resolve_all_targets
 from src.mhddos import main as mhddos_main
 from src.output import AtomicCounter, show_statistic, print_banner, print_progress
@@ -22,47 +20,6 @@ from src.targets import Targets
 
 
 Params = namedtuple('Params', 'target, method')
-
-PAD_THREADS = 30
-
-TERMINATE = object()
-
-class DaemonThreadPool(Executor):
-    def __init__(self):
-        self._queue = queue.SimpleQueue()
-    def start(self, num_threads):
-        threads_started = num_threads
-        for cnt in range(num_threads):
-            try:
-                Thread(target=self._worker, daemon=True).start()
-            except RuntimeError:
-                for _ in range(PAD_THREADS):
-                    self._queue.put(TERMINATE)
-                threads_started = cnt - PAD_THREADS
-                if threads_started <= 0:
-                    logger.warning(f'{cl.RED}Не вдалося запустити атаку - вичерпано ліміт потоків системи{cl.RESET}')
-                    exit()
-                logger.warning(
-                    f'{cl.RED}Не вдалося запустити усі {num_threads} потоків - лише {threads_started}{cl.RESET}'
-                )
-                break
-        return threads_started
-
-    def submit(self, fn, *args, **kwargs):
-        f = Future()
-        w = _WorkItem(f, fn, args, kwargs)
-        self._queue.put(w)
-        return f
-
-    def _worker(self):
-        while True:
-            work_item = self._queue.get(block=True)
-            if work_item is TERMINATE:
-                return
-
-            if work_item is not None:
-                work_item.run()
-                del work_item
 
 
 class Flooder(Thread):
@@ -122,7 +79,7 @@ def run_ddos(
     debug,
     table,
     udp_threads,
-    work_stealing_cycles,
+    switch_after,
 ):
     statistics, event, kwargs_list, udp_kwargs_list = {}, Event(), [], []
 
@@ -169,7 +126,7 @@ def run_ddos(
     threads = []
     # run threads for all targets with TCP port
     for _ in range(total_threads):
-        flooder = Flooder(event, kwargs_list, work_stealing_cycles)
+        flooder = Flooder(event, kwargs_list, switch_after)
         try:
             flooder.start()
             threads.append(flooder)
@@ -190,7 +147,7 @@ def run_ddos(
     if udp_kwargs_list:
         udp_threads_started = 0
         for _ in range(udp_threads):
-            flooder = Flooder(event, udp_kwargs_list, work_stealing_cycles)
+            flooder = Flooder(event, udp_kwargs_list, switch_after)
             try:
                 flooder.start()
                 threads.append(flooder)
@@ -250,6 +207,7 @@ def start(args):
 
     proxies = []
     is_old_version = not is_latest_version()
+    dns_executor = DaemonThreadPool(DNS_WORKERS).start_all()
     while True:
         if is_old_version:
             print(f'{cl.RED}! ЗАПУЩЕНА НЕ ОСТАННЯ ВЕРСІЯ - ОНОВІТЬСЯ{cl.RESET}: https://telegra.ph/Onovlennya-mhddos-proxy-04-16\n')
@@ -260,7 +218,7 @@ def start(args):
                 logger.error(f'{cl.RED}Не вказано жодної цілі для атаки{cl.RESET}')
                 exit()
 
-            targets = resolve_all_targets(targets)
+            targets = resolve_all_targets(targets, dns_executor)
             targets = [target for target in targets if target.is_resolved]
             if targets:
                 break
