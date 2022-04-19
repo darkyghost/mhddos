@@ -28,9 +28,7 @@ class Flooder(Thread):
         super(Flooder, self).__init__(daemon=True)
         self._event = event
         self._switch_after = switch_after
-        runnables = [mhddos_main(**kwargs) for kwargs in args_list]
-        random.shuffle(runnables)
-        self._runnables_iter = cycle(runnables)
+        self._args_list = args_list
 
     def run(self):
         """
@@ -55,9 +53,12 @@ class Flooder(Thread):
         be equivalent to the scheduling that was used before the feature was
         introduced (static assignment).
         """
+        runnables = [mhddos_main(**kwargs) for kwargs in self._args_list]
+        random.shuffle(runnables)
+        runnables_iter = cycle(runnables)
         self._event.wait()
         while self._event.is_set():
-            runnable = next(self._runnables_iter)
+            runnable = next(runnables_iter)
             no_switch = self._switch_after == WORK_STEALING_DISABLED
             alive, cycles_left = True, self._switch_after
             while self._event.is_set() and (no_switch or alive):
