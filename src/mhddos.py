@@ -108,17 +108,16 @@ class Tools:
             value = i / pow(base, multiple)
             return f'{value:.2f} {MULTIPLES[multiple]}'
         else:
-            return '0'
+            return '0 Bit'
 
     @staticmethod
-    def humanformat(num: int, precision: int = 2):
+    def humanformat(num: int, precision: int = 2) -> str:
         suffixes = ['', 'k', 'm', 'g', 't', 'p']
         if num > 999:
-            obje = sum(
-                [abs(num / 1000.0 ** x) >= 1 for x in range(1, len(suffixes))])
+            obje = sum(abs(num / 1000.0 ** x) >= 1 for x in range(1, len(suffixes)))
             return f'{num / 1000.0 ** obje:.{precision}f}{suffixes[obje]}'
         else:
-            return num
+            return str(num)
 
     @staticmethod
     def sizeOfRequest(res: Response) -> int:

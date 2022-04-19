@@ -129,7 +129,7 @@ def run_ddos(
         container.append(kwargs)
         if not table:
             logger.info(
-                f"{cl.YELLOW}Атакуємо{cl.BLUE} %s{cl.YELLOW} методом{cl.BLUE} %s{cl.YELLOW}!{cl.RESET}"
+                f"{cl.YELLOW}Атакуємо{cl.BLUE} %s{cl.YELLOW} методом{cl.BLUE} %s{cl.YELLOW}{cl.RESET}"
                 % (params.target.url.host, params.method))
 
 
@@ -167,7 +167,7 @@ def run_ddos(
         sleep(period)
     else:
         ts = time()
-        refresh_rate = 4 if table else 2
+        refresh_rate = 5
         sleep(refresh_rate)
         while True:
             passed = time() - ts
