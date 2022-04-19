@@ -1,4 +1,6 @@
 import os
+from threading import Lock
+from typing import Dict, Tuple
 
 from tabulate import tabulate
 
@@ -6,18 +8,54 @@ from .core import cl, logger, THREADS_PER_CORE
 from .mhddos import Tools
 
 
+class Stats:
+
+    def __init__(self):
+        self._requests: int = 0
+        self._bytes: int = 0
+        self._lock = Lock()
+
+    def __iadd__(self, value: Tuple[int, int]):
+        self.increment(value)
+        return self
+
+    def get(self) -> Tuple[int, int]:
+        with self._lock:
+            return self._requests, self._bytes
+
+    def increment(self, value: Tuple[int, int]):
+        requests, bytes = value
+        with self._lock:
+            self._requests += requests
+            self._bytes += bytes
+
+    def reset(self) -> Tuple[int, int]:
+        with self._lock:
+            current = self._requests, self._bytes
+            self._requests, self._bytes = 0, 0
+        return current
+
+
 def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, period, passed):
+def show_statistic(
+    statistics: Dict["Params", Stats],
+    refresh_rate,
+    table,
+    vpn_mode,
+    proxies_cnt,
+    period,
+    passed
+):
     tabulate_text = []
-    total_pps = 0
-    total_bps = 0
-    for params, counters in statistics.items():
-        pps = int(counters['requests'].reset() / refresh_rate)
+    total_pps, total_bps = 0, 0
+    for params, stats in statistics.items():
+        rs, bs = stats.reset()
+        pps = int(rs / refresh_rate)
         total_pps += pps
-        bps = int(8 * counters['bytes'].reset() / refresh_rate)
+        bps = int(8 * bs / refresh_rate)
         total_bps += bps
         if table:
             tabulate_text.append((
