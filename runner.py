@@ -232,7 +232,7 @@ def start(args):
         if no_proxies:
             proxies = []
         else:
-            proxies = update_proxies(args.proxies, proxies)
+            proxies = list(update_proxies(args.proxies, proxies))
 
         period = 300
         run_ddos(
