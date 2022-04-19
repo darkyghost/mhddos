@@ -115,7 +115,7 @@ def run_ddos(thread_pool, proxies, targets, total_threads, period, rpc, http_met
         sleep(period)
     else:
         ts = time()
-        refresh_rate = 4 if table else 2
+        refresh_rate = 5
         sleep(refresh_rate)
         while True:
             passed = time() - ts

@@ -73,6 +73,14 @@ def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, perio
             tablefmt='fancy_grid'
         ))
         print_banner(vpn_mode)
+    else:
+        logger.info(
+            f'{cl.GREEN}Усього{cl.YELLOW} PPS:{cl.BLUE} %s,{cl.YELLOW} BPS:{cl.BLUE} %s{cl.RESET}' %
+            (
+                Tools.humanformat(total_pps),
+                Tools.humanbits(total_bps),
+            )
+        )
 
     print_progress(period, passed, proxies_cnt)
 
