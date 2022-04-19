@@ -10,7 +10,6 @@ def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-
 def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, period, passed):
     tabulate_text = []
     total_pps = 0
