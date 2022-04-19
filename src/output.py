@@ -15,19 +15,14 @@ class Stats:
         self._bytes: int = 0
         self._lock = Lock()
 
-    def __iadd__(self, value: Tuple[int, int]):
-        self.increment(value)
-        return self
-
     def get(self) -> Tuple[int, int]:
         with self._lock:
             return self._requests, self._bytes
 
-    def increment(self, value: Tuple[int, int]):
-        requests, bytes = value
+    def track(self, rs: int, bs: int) -> None:
         with self._lock:
-            self._requests += requests
-            self._bytes += bytes
+            self._requests += rs
+            self._bytes += bs
 
     def reset(self) -> Tuple[int, int]:
         with self._lock:
