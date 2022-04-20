@@ -5,9 +5,7 @@ from threading import Thread
 
 from src.core import logger, cl
 
-
 TERMINATE = object()
-
 
 class DaemonThreadPool(Executor):
 
@@ -16,13 +14,17 @@ class DaemonThreadPool(Executor):
         self._num_workers = num_workers
 
     def start_all(self):
-        for cnt in range(self._num_workers):
+        for _ in range(self._num_workers):
             try:
                 Thread(target=self._worker, daemon=True).start()
             except RuntimeError:
                 logger.warning(f'{cl.RED}Не вдалося запустити атаку - вичерпано ліміт потоків системи{cl.RESET}')
                 exit()
         return self
+
+    def terminate_all(self):
+        for _ in range(self._num_workers):
+            self._queue.put(TERMINATE)
 
     def submit(self, fn, *args, **kwargs):
         f = Future()
