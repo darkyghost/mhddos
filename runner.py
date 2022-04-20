@@ -3,7 +3,7 @@ import colorama; colorama.init()
 # @formatter:on
 from itertools import cycle
 from queue import SimpleQueue
-from random import shuffle
+from random import random, shuffle
 from threading import Event, Thread
 from time import sleep, time
 from typing import Any, Generator, List
@@ -61,8 +61,9 @@ class Flooder(Thread):
         """
         while True:
             event, args_list = self._queue.get()
-            kwargs_iter = cycle_shuffled(args_list)
             event.wait()
+            sleep(random()) # make sure all operations are desynchornized
+            kwargs_iter = cycle_shuffled(args_list)
             while event.is_set():
                 kwargs = next(kwargs_iter)
                 runnable = mhddos_main(**kwargs)
