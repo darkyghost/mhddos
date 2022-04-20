@@ -6,17 +6,24 @@ from queue import SimpleQueue
 from random import shuffle
 from threading import Event, Thread
 from time import sleep, time
-from typing import List
+from typing import Any, Generator, List
 
 from src.cli import init_argparse
 from src.concurrency import DaemonThreadPool
-from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED, DNS_WORKERS, Params, Stats
+from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED, DNS_WORKERS, Params, Stats, PADDING_THREADS
 from src.dns_utils import resolve_all_targets
 from src.mhddos import main as mhddos_main
 from src.output import show_statistic, print_banner, print_progress
 from src.proxies import update_proxies
 from src.system import fix_ulimits, is_latest_version
 from src.targets import Targets
+
+
+def cycle_shuffled(container: List[Any]) -> Generator[Any, None, None]:
+    ind = list(range(len(container)))
+    shuffle(ind)
+    for next_ind in cycle(ind):
+        yield container[next_ind]
 
 
 class Flooder(Thread):
@@ -54,12 +61,11 @@ class Flooder(Thread):
         """
         while True:
             event, args_list = self._queue.get()
-            runnables = [mhddos_main(**kwargs) for kwargs in args_list]
-            shuffle(runnables)
-            runnables_iter = cycle(runnables)
+            kwargs_iter = cycle_shuffled(args_list)
             event.wait()
             while event.is_set():
-                runnable = next(runnables_iter)
+                kwargs = next(kwargs_iter)
+                runnable = mhddos_main(**kwargs)
                 no_switch = self._switch_after == WORK_STEALING_DISABLED
                 alive, cycles_left = True, self._switch_after
                 while event.is_set() and (no_switch or alive):
@@ -192,9 +198,16 @@ def start(args):
 
     proxies = []
     is_old_version = not is_latest_version()
+
+    # padding threads are necessary to create a "safety buffer" for the
+    # system that hit resources limitation when running main pools.
+    # it will be deallocated as soon as all other threads are up and running.
+    padding_threads = DaemonThreadPool(PADDING_THREADS).start_all()
     dns_executor = DaemonThreadPool(DNS_WORKERS).start_all()
     udp_flooders = run_flooders(args.udp_threads, WORK_STEALING_DISABLED)
     tcp_flooders = run_flooders(args.threads, args.switch_after)
+    padding_threads.terminate_all()
+    del padding_threads
 
     while True:
         if is_old_version:
