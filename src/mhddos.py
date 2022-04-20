@@ -15,7 +15,7 @@ from subprocess import run, PIPE
 from sys import exit as _exit
 from threading import Event
 from time import sleep, time
-from typing import Any, List, Optional, Set, Tuple
+from typing import Any, List, Set, Tuple
 from urllib import parse
 
 from cloudscraper import create_scraper
@@ -236,7 +236,7 @@ class Layer4:
             self._proxies = proxies
         self.select(self._method)
 
-    def run(self) -> Optional[int]:
+    def run(self) -> int:
         return self.SENT_FLOOD()
 
     def open_connection(self,
@@ -472,7 +472,7 @@ class HttpFlood:
                          'Upgrade-Insecure-Requests: 1\r\n')
         self.select(self._method)
 
-    def run(self) -> Optional[int]:
+    def run(self) -> int:
         return self.SENT_FLOOD()
 
     @property
