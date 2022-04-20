@@ -1,34 +1,10 @@
 import os
-from threading import Lock
-from typing import Dict, Tuple
+from typing import Dict
 
 from tabulate import tabulate
 
-from .core import cl, logger, THREADS_PER_CORE
+from .core import cl, logger, THREADS_PER_CORE, Params, Stats
 from .mhddos import Tools
-
-
-class Stats:
-
-    def __init__(self):
-        self._requests: int = 0
-        self._bytes: int = 0
-        self._lock = Lock()
-
-    def get(self) -> Tuple[int, int]:
-        with self._lock:
-            return self._requests, self._bytes
-
-    def track(self, rs: int, bs: int) -> None:
-        with self._lock:
-            self._requests += rs
-            self._bytes += bs
-
-    def reset(self) -> Tuple[int, int]:
-        with self._lock:
-            current = self._requests, self._bytes
-            self._requests, self._bytes = 0, 0
-        return current
 
 
 def cls():
@@ -36,7 +12,7 @@ def cls():
 
 
 def show_statistic(
-    statistics: Dict["Params", Stats],
+    statistics: Dict[Params, Stats],
     refresh_rate,
     table,
     vpn_mode,
