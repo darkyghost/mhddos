@@ -327,7 +327,7 @@ class Layer4:
         return packets
 
     def SYN(self) -> int:
-        payload = self._genrate_syn()
+        payload = self._generate_syn()
         s, packets = None, 0
         with suppress(Exception), socket(AF_INET, SOCK_RAW, IPPROTO_TCP) as s:
             s.setsockopt(IPPROTO_IP, IP_HDRINCL, 1)
@@ -385,7 +385,7 @@ class Layer4:
         Tools.safe_close(s)
         return packets
 
-    def _genrate_syn(self) -> bytes:
+    def _generate_syn(self) -> bytes:
         ip: IP = IP()
         ip.set_ip_src(getMyIPAddress())
         ip.set_ip_dst(self._target[0])
