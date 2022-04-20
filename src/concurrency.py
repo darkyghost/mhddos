@@ -3,9 +3,11 @@ from concurrent.futures.thread import _WorkItem
 import queue
 from threading import Thread
 
-from src.core import logger
+from src.core import logger, cl
 
-_TERMINATE = object()
+
+TERMINATE = object()
+
 
 class DaemonThreadPool(Executor):
 
@@ -31,7 +33,7 @@ class DaemonThreadPool(Executor):
     def _worker(self):
         while True:
             work_item = self._queue.get(block=True)
-            if work_item is _TERMINATE:
+            if work_item is TERMINATE:
                 return
 
             if work_item is not None:
