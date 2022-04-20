@@ -15,7 +15,7 @@ from subprocess import run, PIPE
 from sys import exit as _exit
 from threading import Event
 from time import sleep, time
-from typing import Any, List, Set, Tuple
+from typing import Any, List, Optional, Set, Tuple
 from urllib import parse
 
 from cloudscraper import create_scraper
@@ -41,7 +41,7 @@ ctx.set_ciphers("DEFAULT")
 
 SOCK_TIMEOUT = 8
 
-__ip__: Any = None
+__ip__: Optional[str] = None
 
 
 def getMyIPAddress():
