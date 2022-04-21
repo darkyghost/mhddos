@@ -62,7 +62,7 @@ class Flooder(Thread):
         while True:
             event, args_list = self._queue.get()
             event.wait()
-            sleep(random()) # make sure all operations are desynchornized
+            sleep(random())  # make sure all operations are desynchornized
             kwargs_iter = cycle_shuffled(args_list)
             while event.is_set():
                 kwargs = next(kwargs_iter)
@@ -127,10 +127,6 @@ def run_ddos(
             'proxies': proxies,
         }
         container.append(kwargs)
-        if not table:
-            logger.info(
-                f"{cl.YELLOW}Атакуємо{cl.BLUE} %s{cl.YELLOW} методом{cl.BLUE} %s{cl.YELLOW}{cl.RESET}"
-                % (params.target.url.host, params.method))
 
     for target in targets:
         assert target.is_resolved, "Unresolved target cannot be used for attack"
@@ -230,7 +226,7 @@ def start(args):
 
         if args.rpc < LOW_RPC:
             logger.warning(
-                f'{cl.RED}RPC менше за {LOW_RPC}. Це може призвести до падіння продуктивності '
+                f'{cl.YELLOW}RPC менше за {LOW_RPC}. Це може призвести до падіння продуктивності '
                 f'через збільшення кількості перепідключень{cl.RESET}'
             )
 
