@@ -1,9 +1,9 @@
 import os
-from threading import Lock
+from typing import Dict
 
 from tabulate import tabulate
 
-from .core import cl, logger, THREADS_PER_CORE
+from .core import cl, logger, THREADS_PER_CORE, Params, Stats
 from .mhddos import Tools
 
 
@@ -11,65 +11,49 @@ def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-class AtomicCounter:
-    def __init__(self, initial=0):
-        self.value = initial
-        self._lock = Lock()
-
-    def __iadd__(self, value):
-        self.increment(value)
-        return self
-
-    def __int__(self):
-        return self.value
-
-    def increment(self, num=1):
-        with self._lock:
-            self.value += num
-
-    def reset(self, value=0):
-        with self._lock:
-            old = self.value
-            self.value = value
-        return old
-
-
-def show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, period, passed):
+def show_statistic(
+    statistics: Dict[Params, Stats],
+    refresh_rate,
+    table,
+    vpn_mode,
+    proxies_cnt,
+    period,
+    passed
+):
     tabulate_text = []
-    total_pps = 0
-    total_bps = 0
-    for params, counters in statistics.items():
-        pps = int(counters['requests'].reset() / refresh_rate)
+    total_pps, total_bps = 0, 0
+    for params, stats in statistics.items():
+        rs, bs = stats.reset()
+        pps = int(rs / refresh_rate)
         total_pps += pps
-        bps = int(8 * counters['bytes'].reset() / refresh_rate)
+        bps = int(8 * bs / refresh_rate)
         total_bps += bps
         if table:
             tabulate_text.append((
                 f'{cl.YELLOW}%s' % params.target.url.host, params.target.url.port, params.method,
-                params.threads, f'{Tools.humanformat(pps)}/s', f'{Tools.humanbits(bps)}/s{cl.RESET}'
+                Tools.humanformat(pps) + "/s", f'{Tools.humanbits(bps)}/s{cl.RESET}'
             ))
         else:
             logger.info(
-                f'{cl.YELLOW}Ціль:{cl.BLUE} %s{cl.YELLOW}, Порт:{cl.BLUE} %s{cl.YELLOW}, Метод:{cl.BLUE} %s{cl.YELLOW},'
-                f' Потоки:{cl.BLUE} %s{cl.YELLOW}, Запити:{cl.BLUE} %s/s{cl.YELLOW}, Трафік:{cl.BLUE} %s/s{cl.RESET}' %
+                f'{cl.YELLOW}Ціль:{cl.BLUE} %s,{cl.YELLOW} Порт:{cl.BLUE} %s,{cl.YELLOW} Метод:{cl.BLUE} %s'
+                f' {cl.YELLOW} Запити:{cl.BLUE} %s/s,{cl.YELLOW} Трафік:{cl.BLUE} %s/s{cl.RESET}' %
                 (
                     params.target.url.host,
                     params.target.url.port,
                     params.method,
-                    params.threads,
                     Tools.humanformat(pps),
                     Tools.humanbits(bps),
                 )
             )
 
     if table:
-        tabulate_text.append((f'{cl.GREEN}Усього', '', '', '', f'{Tools.humanformat(total_pps)}/s',
+        tabulate_text.append((f'{cl.GREEN}Усього', '', '', Tools.humanformat(total_pps) + "/s",
                               f'{Tools.humanbits(total_bps)}/s{cl.RESET}'))
 
         cls()
         print(tabulate(
             tabulate_text,
-            headers=[f'{cl.BLUE}Ціль', 'Порт', 'Метод', 'Потоки', 'Запити', f'Трафік{cl.RESET}'],
+            headers=[f'{cl.BLUE}Ціль', 'Порт', 'Метод', 'Запити', f'Трафік{cl.RESET}'],
             tablefmt='fancy_grid'
         ))
         print_banner(vpn_mode)

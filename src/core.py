@@ -1,6 +1,9 @@
 import logging
 import random
+from collections import namedtuple
 from pathlib import Path
+from threading import Lock
+from typing import Tuple
 
 from colorama import Fore
 
@@ -25,6 +28,11 @@ LOW_RPC = 1000
 THREADS_PER_CORE = 1000
 MAX_DEFAULT_THREADS = 4000
 
+WORK_STEALING_DISABLED = -1
+
+DNS_WORKERS = 10
+
+PADDING_THREADS = 30
 
 class cl:
     MAGENTA = Fore.LIGHTMAGENTA_EX
@@ -34,3 +42,27 @@ class cl:
     RED = Fore.LIGHTRED_EX
     RESET = Fore.RESET
 
+
+Params = namedtuple('Params', 'target, method')
+
+
+class Stats:
+    def __init__(self):
+        self._requests: int = 0
+        self._bytes: int = 0
+        self._lock = Lock()
+
+    def get(self) -> Tuple[int, int]:
+        with self._lock:
+            return self._requests, self._bytes
+
+    def track(self, rs: int, bs: int) -> None:
+        with self._lock:
+            self._requests += rs
+            self._bytes += bs
+
+    def reset(self) -> Tuple[int, int]:
+        with self._lock:
+            current = self._requests, self._bytes
+            self._requests, self._bytes = 0, 0
+        return current

