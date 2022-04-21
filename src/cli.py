@@ -2,7 +2,7 @@ import argparse
 import random
 from multiprocessing import cpu_count
 
-from .core import THREADS_PER_CORE, MAX_DEFAULT_THREADS
+from .core import THREADS_PER_CORE, MAX_DEFAULT_THREADS, UDP_THREADS, WORK_STEALING_DISABLED
 from .mhddos import Methods
 
 
@@ -24,6 +24,12 @@ def init_argparse() -> argparse.ArgumentParser:
         type=int,
         default=min(THREADS_PER_CORE * cpu_count(), MAX_DEFAULT_THREADS),
         help=f'Total number of threads to run (default is CPU * {THREADS_PER_CORE})',
+    )
+    parser.add_argument(
+        '--udp-threads',
+        type=int,
+        default=UDP_THREADS,
+        help=f'Total number of threads to run for UDP sockets (defaults to {UDP_THREADS})',
     )
     parser.add_argument(
         '--rpc',
@@ -66,6 +72,17 @@ def init_argparse() -> argparse.ArgumentParser:
         '--itarmy',
         action='store_true',
         default=False,
+    )
+    parser.add_argument(
+        '--switch-after',
+        type=int,
+        default=100,
+        help=(
+            "Advanced setting. Make sure to test performance when setting non-default value. "
+            "Defines how many cycles each threads executes over specific target before "
+            "switching to another one. "
+            f"Set to {WORK_STEALING_DISABLED} to disable switching (old mode)"
+        ),
     )
 
     parser.add_argument('-p', '--period', type=int, help='DEPRECATED')
