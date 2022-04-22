@@ -140,6 +140,7 @@ def run_ddos(
                 % (params.target.url.host, params.target.url.port, params.method)
             )
 
+    logger.info(f'{cl.GREEN}Запускаємо атаку...{cl.RESET}')
     if not (table or debug):
         # Keep the docs/info on-screen for some time before outputting the logger.info above
         time.sleep(5)
@@ -253,7 +254,6 @@ def start(args):
             proxies = list(update_proxies(args.proxies, proxies))
 
         period = 300
-        logger.info(f'{cl.GREEN}Запускаємо атаку...{cl.RESET}')
         run_ddos(
             proxies,
             targets,
