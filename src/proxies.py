@@ -1,3 +1,5 @@
+from socket import AF_INET, SOCK_STREAM, socket
+
 from PyRoxy import ProxyUtiles
 from .core import logger, cl, PROXIES_URL
 from .system import read_or_fetch, fetch
@@ -9,6 +11,17 @@ _globals_before = set(globals().keys()).union({'_globals_before'})
 from .load_proxies import *
 decrypt_proxies = globals()[set(globals().keys()).difference(_globals_before).pop()]
 # @formatter:on
+
+
+class _NoProxy:
+    def asRequest(self):
+        return None
+
+    def open_socket(self, family=AF_INET, type=SOCK_STREAM, proto=-1, fileno=None):
+        return socket(family, type, proto, fileno)
+
+
+NoProxy = _NoProxy()
 
 
 def update_proxies(proxies_file, previous_proxies):
@@ -49,7 +62,8 @@ def load_system_proxies():
     except Exception:
         proxies = []
     if proxies:
-        logger.info(f'{cl.YELLOW}Отримано персональну вибірку {cl.BLUE}{len(proxies):,}{cl.YELLOW} проксі зі списку {cl.BLUE}10.000+{cl.RESET}')
+        logger.info(
+            f'{cl.YELLOW}Отримано персональну вибірку {cl.BLUE}{len(proxies):,}{cl.YELLOW} проксі зі списку ''{cl.BLUE}15.000+{cl.RESET}')
     else:
         logger.warning(f'{cl.RED}Не вдалося отримати персональну вибірку проксі{cl.RESET}')
     return proxies

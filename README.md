@@ -90,7 +90,7 @@
       -t, --threads 2000     Total number of threads to run (default is CPU * 1000)
       --table                Print log as table
       --debug                Print log as text
-      --vpn                  Disable proxies to use VPN
+      --vpn                  Use both my IP and proxies for the attack. Optionally, specify a percent of using my IP (default is 20%)
       --rpc 2000             How many requests to send on a single proxy connection (default is 2000)
       --proxies URL|path     URL or local path to file with proxies to use
       --udp-threads 1        Total number of threads to run for UDP sockets (defaults to 1)
