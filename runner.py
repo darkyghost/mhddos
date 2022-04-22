@@ -146,8 +146,6 @@ def run_ddos(
         else:
             raise ValueError(f"Unsupported scheme given: {target.url.scheme}")
 
-    logger.info(f'{cl.YELLOW}Запускаємо атаку...{cl.RESET}')
-
     for flooder in tcp_flooders:
         flooder.enqueue(event, kwargs_list)
 
@@ -156,6 +154,7 @@ def run_ddos(
             flooder.enqueue(event, udp_kwargs_list)
 
     event.set()
+    logger.info(f'{cl.MAGENTA}Атаку запущено!{cl.RESET}')
 
     if not (table or debug):
         print_progress(period, 0, len(proxies))
