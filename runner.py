@@ -140,6 +140,10 @@ def run_ddos(
                 % (params.target.url.host, params.target.url.port, params.method)
             )
 
+    if not (table or debug):
+        # Keep the docs/info on-screen for some time before outputting the logger.info above
+        time.sleep(5)
+
     for target in targets:
         assert target.is_resolved, "Unresolved target cannot be used for attack"
         # udp://, method defaults to "UDP"
@@ -250,8 +254,6 @@ def start(args):
 
         period = 300
         logger.info(f'{cl.GREEN}Запускаємо атаку...{cl.RESET}')
-        if not (args.debug or args.table):
-            time.sleep(5)  # Keep the docs/info on-screen for some time
         run_ddos(
             proxies,
             targets,
