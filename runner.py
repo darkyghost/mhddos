@@ -91,7 +91,7 @@ def run_flooders(num_threads, switch_after) -> List[Flooder]:
             break
 
     if not threads:
-        logger.warning(
+        logger.error(
             f'{cl.RED}Не вдалося запустити атаку - вичерпано ліміт потоків системи{cl.RESET}')
         exit()
 
@@ -134,6 +134,11 @@ def run_ddos(
             'proxies': proxies,
         }
         container.append(kwargs)
+        if not (table or debug):
+            logger.info(
+                f'{cl.YELLOW}Атакуємо ціль:{cl.BLUE} %s,{cl.YELLOW} Порт:{cl.BLUE} %s,{cl.YELLOW} Метод:{cl.BLUE} %s{cl.RESET}'
+                % (params.target.url.host, params.target.url.port, params.method)
+            )
 
     for target in targets:
         assert target.is_resolved, "Unresolved target cannot be used for attack"
@@ -161,7 +166,6 @@ def run_ddos(
             flooder.enqueue(event, udp_kwargs_list)
 
     event.set()
-    logger.info(f'{cl.MAGENTA}Атаку запущено!{cl.RESET}')
 
     if not (table or debug):
         print_progress(period, 0, len(proxies))
@@ -245,6 +249,9 @@ def start(args):
             proxies = list(update_proxies(args.proxies, proxies))
 
         period = 300
+        logger.info(f'{cl.GREEN}Запускаємо атаку...{cl.RESET}')
+        if not (args.debug or args.table):
+            time.sleep(5)  # Keep the docs/info on-screen for some time
         run_ddos(
             proxies,
             targets,
