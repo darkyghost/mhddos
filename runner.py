@@ -3,14 +3,17 @@ import colorama; colorama.init()
 # @formatter:on
 from itertools import cycle
 from queue import SimpleQueue
-from random import random, shuffle
+import random
+import time
 from threading import Event, Thread
-from time import sleep, time
 from typing import Any, Generator, List
 
 from src.cli import init_argparse
 from src.concurrency import DaemonThreadPool
-from src.core import logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED, DNS_WORKERS, Params, Stats, PADDING_THREADS
+from src.core import (
+    logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED,
+    DNS_WORKERS, Params, Stats, PADDING_THREADS
+)
 from src.dns_utils import resolve_all_targets
 from src.mhddos import main as mhddos_main
 from src.output import show_statistic, print_banner, print_progress
@@ -21,7 +24,7 @@ from src.targets import Targets
 
 def cycle_shuffled(container: List[Any]) -> Generator[Any, None, None]:
     ind = list(range(len(container)))
-    shuffle(ind)
+    random.shuffle(ind)
     for next_ind in cycle(ind):
         yield container[next_ind]
 
@@ -62,7 +65,7 @@ class Flooder(Thread):
         while True:
             event, args_list = self._queue.get()
             event.wait()
-            sleep(random())  # make sure all operations are desynchornized
+            time.sleep(random.random())  # make sure all operations are desynchornized
             kwargs_iter = cycle_shuffled(args_list)
             while event.is_set():
                 kwargs = next(kwargs_iter)
@@ -113,6 +116,10 @@ def run_ddos(
     table,
 ):
     statistics, event, kwargs_list, udp_kwargs_list = {}, Event(), [], []
+    proxies_cnt = len(proxies)
+
+    def get_proxy():
+        return random.choice()
 
     def register_params(params, container):
         thread_statistics = Stats()
@@ -158,17 +165,17 @@ def run_ddos(
 
     if not (table or debug):
         print_progress(period, 0, len(proxies))
-        sleep(period)
+        time.sleep(period)
     else:
-        ts = time()
+        ts = time.time()
         refresh_rate = 5
-        sleep(refresh_rate)
+        time.sleep(refresh_rate)
         while True:
-            passed = time() - ts
+            passed = time.time() - ts
             if passed > period:
                 break
-            show_statistic(statistics, refresh_rate, table, vpn_mode, len(proxies), period, passed)
-            sleep(refresh_rate)
+            show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, period, passed)
+            time.sleep(refresh_rate)
 
     event.clear()
 
@@ -207,7 +214,8 @@ def start(args):
 
     while True:
         if is_old_version:
-            print(f'{cl.RED}! ЗАПУЩЕНА НЕ ОСТАННЯ ВЕРСІЯ - ОНОВІТЬСЯ{cl.RESET}: https://telegra.ph/Onovlennya-mhddos-proxy-04-16\n')
+            print(
+                f'{cl.RED}! ЗАПУЩЕНА НЕ ОСТАННЯ ВЕРСІЯ - ОНОВІТЬСЯ{cl.RESET}: https://telegra.ph/Onovlennya-mhddos-proxy-04-16\n')
 
         while True:
             targets = list(targets_iter)
@@ -220,8 +228,9 @@ def start(args):
             if targets:
                 break
             else:
-                logger.warning(f'{cl.RED}Не знайдено жодної доступної цілі - чекаємо 30 сек до наступної перевірки{cl.RESET}')
-                sleep(30)
+                logger.warning(
+                    f'{cl.RED}Не знайдено жодної доступної цілі - чекаємо 30 сек до наступної перевірки{cl.RESET}')
+                time.sleep(30)
 
         if args.rpc < LOW_RPC:
             logger.warning(
