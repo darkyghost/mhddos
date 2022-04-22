@@ -30,7 +30,7 @@ def safe_resolve_host(host: str) -> Optional[str]:
     try:
         return resolve_host(host)
     except dns.exception.DNSException:
-        logger.warning(f'{cl.RED}Ціль {host} не доступна і не буде атакована{cl.RESET}')
+        logger.warning(f'{cl.YELLOW}Ціль {cl.BLUE}{host}{cl.YELLOW} не доступна і {cl.RED}не буде атакована{cl.RESET}')
         return None
 
 
