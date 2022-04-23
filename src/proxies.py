@@ -63,7 +63,7 @@ def load_system_proxies():
         proxies = []
     if proxies:
         logger.info(
-            f'{cl.YELLOW}Отримано персональну вибірку {cl.BLUE}{len(proxies):,}{cl.YELLOW} проксі зі списку {cl.BLUE}15.000+{cl.RESET}')
+            f'{cl.YELLOW}Отримано персональну вибірку {cl.BLUE}{len(proxies):,}{cl.YELLOW} проксі зі списку {cl.BLUE}20.000+{cl.RESET}')
     else:
         logger.warning(f'{cl.RED}Не вдалося отримати персональну вибірку проксі{cl.RESET}')
     return proxies
