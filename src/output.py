@@ -74,7 +74,7 @@ def print_progress(period, passed, proxies_cnt, use_my_ip):
     if proxies_cnt:
         logger.info(f'{cl.YELLOW}Кількість проксі: {cl.BLUE}{proxies_cnt}{cl.RESET}')
         if use_my_ip:
-            logger.info(f'{cl.YELLOW}Атака використовує {cl.MAGENTA}ваш IP разом з проксі{cl.RESET}')
+            logger.info(f'{cl.YELLOW}Атака також використовує {cl.MAGENTA}ваш IP разом з проксі{cl.RESET}')
     else:
         logger.info(f'{cl.YELLOW}Атака {cl.MAGENTA}без проксі{cl.YELLOW} - використовується тільки ваш IP{cl.RESET}')
 
