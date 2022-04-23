@@ -2,7 +2,7 @@ import argparse
 import random
 from multiprocessing import cpu_count
 
-from .core import THREADS_PER_CORE, MAX_DEFAULT_THREADS, UDP_THREADS, WORK_STEALING_DISABLED
+from .core import THREADS_PER_CORE, MAX_DEFAULT_THREADS, UDP_THREADS, WORK_STEALING_DISABLED, ONLY_MY_IP
 from .mhddos import Methods
 
 
@@ -51,10 +51,14 @@ def init_argparse() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         '--vpn',
-        dest='vpn_mode',
-        action='store_true',
-        default=False,
-        help='Disable proxies to use VPN',
+        dest='use_my_ip',
+        const=20,
+        default=0,
+        nargs='?',
+        type=int,
+        action='store',
+        help='Use both my IP and proxies for the attack. '
+             'Optionally, specify a percent of using my IP (default is 20%)',
     )
     parser.add_argument(
         '--http-methods',

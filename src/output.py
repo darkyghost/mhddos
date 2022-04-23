@@ -15,7 +15,7 @@ def show_statistic(
     statistics: Dict[Params, Stats],
     refresh_rate,
     table,
-    vpn_mode,
+    use_my_ip,
     proxies_cnt,
     period,
     passed
@@ -56,7 +56,7 @@ def show_statistic(
             headers=[f'{cl.BLUE}Ціль', 'Порт', 'Метод', 'Запити', f'Трафік{cl.RESET}'],
             tablefmt='fancy_grid'
         ))
-        print_banner(vpn_mode)
+        print_banner(use_my_ip)
     else:
         logger.info(
             f'{cl.GREEN}Усього:{cl.YELLOW} Запити:{cl.GREEN} %s/s,{cl.YELLOW} Трафік:{cl.GREEN} %s/s{cl.RESET}' %
@@ -66,24 +66,26 @@ def show_statistic(
             )
         )
 
-    print_progress(period, passed, proxies_cnt)
+    print_progress(period, passed, proxies_cnt, use_my_ip)
 
 
-def print_progress(period, passed, proxies_cnt):
+def print_progress(period, passed, proxies_cnt, use_my_ip):
     logger.info(f'{cl.YELLOW}Новий цикл через: {cl.BLUE}{round(period - passed)} секунд{cl.RESET}')
     if proxies_cnt:
         logger.info(f'{cl.YELLOW}Кількість проксі: {cl.BLUE}{proxies_cnt}{cl.RESET}')
+        if use_my_ip:
+            logger.info(f'{cl.YELLOW}Атака використовує {cl.MAGENTA}ваш IP разом з проксі{cl.RESET}')
     else:
-        logger.info(f'{cl.YELLOW}Атака без проксі - переконайтеся що ви анонімні{cl.RESET}')
+        logger.info(f'{cl.YELLOW}Атака {cl.MAGENTA}без проксі{cl.YELLOW} - використовується тільки ваш IP{cl.RESET}')
 
 
-def print_banner(vpn_mode):
+def print_banner(use_my_ip):
     print(f'''
 - {cl.YELLOW}Навантаження (кількість потоків){cl.RESET} - параметр `-t 3000`, за замовчуванням - CPU * {THREADS_PER_CORE}
 - {cl.YELLOW}Статистика у вигляді таблиці або тексту{cl.RESET} - прапорець `--table` або `--debug`
 - {cl.YELLOW}Повна документація{cl.RESET} - https://github.com/porthole-ascend-cinnamon/mhddos_proxy
     ''')
 
-    if not vpn_mode:
+    if not use_my_ip:
         print(
-            f'        {cl.MAGENTA}Щоб використовувати VPN або власний IP замість проксі - додайте прапорець `--vpn`{cl.RESET}\n')
+            f'        {cl.MAGENTA}Використовувати свій IP або VPN {cl.YELLOW}на додачу до проксі - прапорець `--vpn`{cl.RESET}\n')
