@@ -22,11 +22,8 @@ def show_statistic(
     tabulate_text = []
     total_pps, total_bps = 0, 0
     for params, stats in statistics.items():
-        rs, bs, started_at = stats.reset()
-        interval = time.perf_counter() - started_at
-        pps = int(rs / interval)
+        pps, bps = stats.reset()
         total_pps += pps
-        bps = int(8 * bs / interval)
         total_bps += bps
         if table:
             tabulate_text.append((

@@ -66,8 +66,9 @@ class Stats:
             self._requests += rs
             self._bytes += bs
 
-    def reset(self) -> Tuple[int, int, float]:
+    def reset(self) -> Tuple[int, int]:
         with self._lock:
-            sent_requests, sent_bytes, reset_at = self._requests, self._bytes, self._reset_at
+            sent_requests, sent_bytes, prev_reset_at = self._requests, self._bytes, self._reset_at
             self._requests, self._bytes, self._reset_at = 0, 0, time.perf_counter()
-        return sent_requests, sent_bytes, reset_at
+            interval = self._reset_at - prev_reset_at
+        return int(sent_requests / interval), int(8 * sent_bytes / interval)
