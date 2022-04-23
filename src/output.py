@@ -88,4 +88,4 @@ def print_banner(use_my_ip):
 
     if not use_my_ip:
         print(
-            f'        {cl.MAGENTA}Свій IP або VPN на додачу до проксі - прапорець `--vpn`{cl.RESET}\n')
+            f'        {cl.MAGENTA}Свій IP або VPN {cl.YELLOW}на додачу до проксі - прапорець `--vpn`{cl.RESET}\n')
