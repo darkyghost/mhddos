@@ -52,13 +52,13 @@ def init_argparse() -> argparse.ArgumentParser:
     parser.add_argument(
         '--vpn',
         dest='use_my_ip',
-        const=20,
+        const=10,
         default=0,
         nargs='?',
         type=int,
         action='store',
         help='Use both my IP and proxies for the attack. '
-             'Optionally, specify a percent of using my IP (default is 20%)',
+             'Optionally, specify a percent of using my IP (default is 10%)',
     )
     parser.add_argument(
         '--http-methods',

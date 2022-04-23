@@ -120,7 +120,7 @@ def run_ddos(
     def get_proxy():
         if use_my_ip == ONLY_MY_IP:
             return NoProxy
-        if use_my_ip != 0 and random.random() <= use_my_ip:
+        if use_my_ip != 0 and random.random() * 100 <= use_my_ip:
             return NoProxy
         return random.choice(proxies)
 
