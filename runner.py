@@ -202,10 +202,7 @@ def start(args):
 
     for bypass in ('CFB', 'DGB'):
         if bypass in args.http_methods:
-            logger.warning(
-                f'{cl.RED}Робота методу {bypass} не гарантована - атака методами '
-                f'за замовчуванням може бути ефективніша{cl.RESET}'
-            )
+            logger.warning(f'{cl.RED}Робота методу {bypass} не гарантована{cl.RESET}')
 
     if args.itarmy:
         targets_iter = Targets([], IT_ARMY_CONFIG_URL)
