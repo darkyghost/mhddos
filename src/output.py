@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Dict
 
 from tabulate import tabulate
@@ -13,20 +14,19 @@ def cls():
 
 def show_statistic(
     statistics: Dict[Params, Stats],
-    refresh_rate,
     table,
     use_my_ip,
     proxies_cnt,
-    period,
-    passed
+    time_left
 ):
     tabulate_text = []
     total_pps, total_bps = 0, 0
     for params, stats in statistics.items():
-        rs, bs = stats.reset()
-        pps = int(rs / refresh_rate)
+        rs, bs, started_at = stats.reset()
+        interval = time.perf_counter() - started_at
+        pps = int(rs / interval)
         total_pps += pps
-        bps = int(8 * bs / refresh_rate)
+        bps = int(8 * bs / interval)
         total_bps += bps
         if table:
             tabulate_text.append((
@@ -66,11 +66,11 @@ def show_statistic(
             )
         )
 
-    print_progress(period, passed, proxies_cnt, use_my_ip)
+    print_progress(time_left, proxies_cnt, use_my_ip)
 
 
-def print_progress(period, passed, proxies_cnt, use_my_ip):
-    logger.info(f'{cl.YELLOW}Новий цикл через: {cl.BLUE}{round(period - passed)} секунд{cl.RESET}')
+def print_progress(time_left, proxies_cnt, use_my_ip):
+    logger.info(f'{cl.YELLOW}Новий цикл через: {cl.BLUE}{time_left} секунд{cl.RESET}')
     if proxies_cnt:
         logger.info(f'{cl.YELLOW}Кількість проксі: {cl.BLUE}{proxies_cnt}{cl.RESET}')
         if use_my_ip:
