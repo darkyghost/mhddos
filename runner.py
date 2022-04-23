@@ -176,18 +176,16 @@ def run_ddos(
     event.set()
 
     if not (table or debug):
-        print_progress(period, 0, len(proxies), use_my_ip)
+        print_progress(period, len(proxies), use_my_ip)
         time.sleep(period)
     else:
-        ts = time.time()
-        refresh_rate = 5
-        time.sleep(refresh_rate)
+        cycle_start = time.perf_counter()
         while True:
-            passed = time.time() - ts
+            time.sleep(5)
+            passed = time.perf_counter() - cycle_start
             if passed > period:
                 break
-            show_statistic(statistics, refresh_rate, table, use_my_ip, len(proxies), period, passed)
-            time.sleep(refresh_rate)
+            show_statistic(statistics, table, use_my_ip, len(proxies), round(period - passed))
 
     event.clear()
 

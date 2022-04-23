@@ -1,5 +1,6 @@
 import logging
 import random
+import time
 from collections import namedtuple
 from pathlib import Path
 from threading import Lock
@@ -54,6 +55,7 @@ class Stats:
         self._requests: int = 0
         self._bytes: int = 0
         self._lock = Lock()
+        self._reset_at = time.perf_counter()
 
     def get(self) -> Tuple[int, int]:
         with self._lock:
@@ -64,8 +66,8 @@ class Stats:
             self._requests += rs
             self._bytes += bs
 
-    def reset(self) -> Tuple[int, int]:
+    def reset(self) -> Tuple[int, int, float]:
         with self._lock:
-            current = self._requests, self._bytes
-            self._requests, self._bytes = 0, 0
-        return current
+            sent_requests, sent_bytes, reset_at = self._requests, self._bytes, self._reset_at
+            self._requests, self._bytes, self._reset_at = 0, 0, time.perf_counter()
+        return sent_requests, sent_bytes, reset_at
