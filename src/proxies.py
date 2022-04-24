@@ -1,7 +1,8 @@
+import random
 from socket import AF_INET, SOCK_STREAM, socket
 
 from PyRoxy import ProxyUtiles
-from .core import logger, cl, PROXIES_URL
+from .core import logger, cl, PROXIES_URLS
 from .system import read_or_fetch, fetch
 
 
@@ -56,7 +57,7 @@ def load_provided_proxies(proxies_file):
 
 
 def load_system_proxies():
-    raw = fetch(PROXIES_URL)
+    raw = fetch(random.choice(PROXIES_URLS))
     try:
         proxies = ProxyUtiles.parseAll(decrypt_proxies(raw))
     except Exception:
