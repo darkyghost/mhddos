@@ -58,7 +58,7 @@ def init_argparse() -> argparse.ArgumentParser:
         type=int,
         action='store',
         help='Use both my IP and proxies for the attack. '
-             'Optionally, specify a percent of using my IP (default is 10%)',
+             'Optionally, specify a percent of using my IP (default is 10%%)',
     )
     parser.add_argument(
         '--http-methods',
