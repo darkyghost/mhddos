@@ -1,7 +1,7 @@
 cloudscraper>=1.2.60
 certifi==2021.10.8
 requests==2.27.1
-git+https://github.com/porthole-ascend-cinnamon/PyRoxy.git@e0cd1b6a4320ecacc885d056d42b23f300f5be52
+git+https://github.com/porthole-ascend-cinnamon/PyRoxy.git@e22e4b26aa3c91b4cbee16a751693cea5827d551
 yarl==1.7.2
 tabulate==0.8.9
 colorama==0.4.4
