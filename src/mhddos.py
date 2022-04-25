@@ -40,10 +40,6 @@ ctx.set_ciphers("DEFAULT")
 
 SOCK_TIMEOUT = 8
 
-with socket(AF_INET, SOCK_DGRAM) as s:
-    s.connect(("8.8.8.8", 80))
-    __ip__ = s.getsockname()[0]
-
 
 def exit(*message):
     if message:
@@ -364,7 +360,7 @@ class Layer4:
 
     def _generate_syn(self) -> bytes:
         ip: IP = IP()
-        ip.set_ip_src(__ip__)
+        ip.set_ip_src(ProxyTools.Random.rand_ipv4())
         ip.set_ip_dst(self._target[0])
         tcp: TCP = TCP()
         tcp.set_SYN()
