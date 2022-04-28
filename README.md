@@ -104,10 +104,8 @@
 #### Формат файлу:
 
     114.231.123.38:1234
-    114.231.123.38:3065:username:password
     username:password@114.231.123.38:3065
     socks5://114.231.155.38:5678
-    socks5://114.231.155.38:5678:username:password
     socks4://username:password@114.231.123.38:3065
 
 #### Віддалений файл (однаково для Python та Docker)
