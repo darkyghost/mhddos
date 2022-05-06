@@ -486,7 +486,7 @@ class HttpFlood:
     @staticmethod
     def getMethodType(method: str) -> str:
         return "GET" if {method.upper()} & {"CFB", "CFBUAM", "GET", "COOKIE", "OVH", "EVEN",
-                                            "DYN", "SLOW", "PPS", "APACHE",
+                                            "DYN", "SLOW", "PPS", "APACHE", "DOWNLOADER", "AVB",
                                             "BOT", } \
             else "POST" if {method.upper()} & {"POST", "XMLRPC", "STRESS"} \
             else "HEAD" if {method.upper()} & {"GSB", "HEAD"} \
