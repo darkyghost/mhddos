@@ -1,0 +1,8 @@
+{
+    "name": "MHDDoS",
+    "description": "Something bigger than just revenge",
+    "repository": "https://github.com/darkyghost/mhddos",
+    "logo": "https://avatars.githubusercontent.com/u/105391091?s=200&v=4",
+    "keywords": ["mhddos", "palyanitsa", "cyberpalyanitsa"],
+    "env": {}
+  }
