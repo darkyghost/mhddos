@@ -1,5 +1,9 @@
 ## IT Army of Ukraine Official Tool 
 
+# Облачні технології
+Для швидкого розвернення, використовуйте Heroku
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+
 ### [English Version](/README-EN.md)
 
 - Вбудована база проксі з величезною кількістю IP по всьому світу
