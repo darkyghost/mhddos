@@ -1,8 +1,8 @@
 import argparse
 import random
-from multiprocessing import cpu_count
 
-from .core import THREADS_PER_CORE, MAX_DEFAULT_THREADS, UDP_THREADS, WORK_STEALING_DISABLED, ONLY_MY_IP
+from .core import DEFAULT_THREADS, SCHEDULER_FORK_SCALE, SCHEDULER_INITIAL_CAPACITY
+from .i18n import LANGUAGES
 from .mhddos import Methods
 
 
@@ -22,20 +22,13 @@ def init_argparse() -> argparse.ArgumentParser:
         '-t',
         '--threads',
         type=int,
-        default=min(THREADS_PER_CORE * cpu_count(), MAX_DEFAULT_THREADS),
-        help=f'Total number of threads to run (default is CPU * {THREADS_PER_CORE})',
+        help=f'Number of threads (default is {DEFAULT_THREADS})',
     )
     parser.add_argument(
-        '--udp-threads',
+        '--copies',
         type=int,
-        default=UDP_THREADS,
-        help=f'Total number of threads to run for UDP sockets (defaults to {UDP_THREADS})',
-    )
-    parser.add_argument(
-        '--rpc',
-        type=int,
-        default=2000,
-        help='How many requests to send on a single proxy connection (default is 2000)',
+        default=1,
+        help='Number of copies (default is 1)',
     )
     parser.add_argument(
         '--debug',
@@ -65,8 +58,8 @@ def init_argparse() -> argparse.ArgumentParser:
         nargs='+',
         type=str.upper,
         default=['GET', random.choice(['POST', 'STRESS'])],
-        choices=Methods.LAYER7_METHODS,
-        help='List of HTTP(s) attack methods to use. Default is GET + POST|STRESS',
+        choices=Methods.HTTP_METHODS,
+        help='List of HTTP(L7) methods to use. Default is GET + POST|STRESS',
     )
     parser.add_argument(
         '--proxies',
@@ -76,19 +69,32 @@ def init_argparse() -> argparse.ArgumentParser:
         '--itarmy',
         action='store_true',
         default=False,
+        help='Attack targets from https://t.me/itarmyofukraine2022'
     )
     parser.add_argument(
-        '--switch-after',
-        type=int,
-        default=100,
-        help=(
-            "Advanced setting. Make sure to test performance when setting non-default value. "
-            "Defines how many cycles each threads executes over specific target before "
-            "switching to another one. "
-            f"Set to {WORK_STEALING_DISABLED} to disable switching (old mode)"
-        ),
+        '--lang',
+        type=str.lower,
+        choices=LANGUAGES,
+        help='Select language (default is ua)'
     )
 
-    parser.add_argument('-p', '--period', type=int, help='DEPRECATED')
-    parser.add_argument('--proxy-timeout', type=float, help='DEPRECATED')
+    # Advanced
+    parser.add_argument(
+        '--rpc',
+        type=int,
+        default=2000,
+        help='How many requests to send on a single proxy connection (default is 2000)',
+    )
+    parser.add_argument(
+        '--scheduler-initial-capacity',
+        type=int,
+        default=SCHEDULER_INITIAL_CAPACITY,
+        help='How many tasks per target to initialize on launch',
+    )
+    parser.add_argument(
+        '--scheduler-fork-scale',
+        type=int,
+        default=SCHEDULER_FORK_SCALE,
+        help='How many tasks to fork on successful connect to the target',
+    )
     return parser
