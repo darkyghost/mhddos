@@ -1,13 +1,15 @@
-FROM --platform=$BUILDPLATFORM python:3.10-alpine as builder
-RUN apk update && apk add --update git gcc libc-dev libffi-dev
-WORKDIR mhddos_proxy
+FROM --platform=$TARGETPLATFORM python:3.10-slim as builder
+
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 COPY ./requirements.txt .
-RUN pip3 install --target=/mhddos_proxy/dependencies -r requirements.txt
-COPY . .
+RUN python3 -m pip install --no-cache-dir -U pip wheel
+RUN python3 -m pip install --no-cache-dir --only-binary=:all: -r requirements.txt
 
-FROM python:3.10-alpine
+FROM --platform=$TARGETPLATFORM python:3.10-slim
+COPY --from=builder	/opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR mhddos_proxy
-COPY --from=builder	/mhddos_proxy .
-ENV PYTHONPATH="${PYTHONPATH}:/mhddos_proxy/dependencies" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
-
+COPY . .
 ENTRYPOINT ["python3", "./runner.py"]

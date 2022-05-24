@@ -2,3 +2,4 @@
 .idea/
 .venv/
 *.egg-info
+*.source.py
